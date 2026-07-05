@@ -52,6 +52,9 @@ app.post("/api/messages", async (req, res) => {
 });
 
 // In production, serve the built SPA so `node server/index.js` runs the whole app.
+// Unknown API routes return JSON, not the SPA fallback below.
+app.use("/api", (_req, res) => res.status(404).json({ error: "Not found." }));
+
 const distDir = path.resolve(__dirname, "..", "dist");
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
