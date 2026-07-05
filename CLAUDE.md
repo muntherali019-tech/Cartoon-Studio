@@ -12,12 +12,25 @@ to the user's own image tool — the app produces everything up to the render st
 
 ## Current State
 
-The application is a single React component; a full build/tooling setup has not
-been added yet.
+A React + Vite app.
 
 - `src/CartoonStudio.jsx` — the entire UI and logic (default-exported `CartoonStudio` component).
+- `src/main.jsx` — React entry point that mounts `CartoonStudio` into `#root`.
+- `index.html` — Vite HTML entry.
+- `vite.config.js` — Vite config with `@vitejs/plugin-react`.
 - `README.md` — project title.
 - The default branch is `main`.
+
+## Setup, Build & Run
+
+```bash
+npm install     # install dependencies
+npm run dev     # start the dev server (http://localhost:5173)
+npm run build   # production build into dist/
+npm run preview # preview the production build
+```
+
+There is no test suite or linter configured yet.
 
 ## Architecture (`src/CartoonStudio.jsx`)
 
@@ -50,8 +63,8 @@ The component is a 4-stage, single-file pipeline with all styling done inline
 
 ## Dependencies
 
-The component imports `react` and `lucide-react`. There is no `package.json` yet —
-add one (and a bundler such as Vite) before running the app locally.
+- Runtime: `react`, `react-dom`, `lucide-react`.
+- Build: `vite`, `@vitejs/plugin-react`.
 
 ## Conventions
 
