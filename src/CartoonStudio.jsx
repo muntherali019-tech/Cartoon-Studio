@@ -36,6 +36,35 @@ function extractJSON(text) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
+// Downscale an uploaded photo in the browser before it's sent to the model.
+// Keeps the long edge at MAX_EDGE and re-encodes as JPEG so the base64 payload
+// stays small (Anthropic's vision API works best under ~5MB per image).
+const MAX_EDGE = 1568;
+function downscaleImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Couldn't read that photo. Try another."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Couldn't read that photo. Try another."));
+      img.onload = () => {
+        const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const url = canvas.toDataURL("image/jpeg", 0.9);
+        resolve({ data: url.split(",")[1], url, type: "image/jpeg" });
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // ---------- presets ----------
 const FORMATS = ["Kids' story", "Explainer", "Ad / promo", "Short play"];
 const TONES = ["Playful", "Heartwarming", "Funny", "Epic", "Calm"];
@@ -202,12 +231,15 @@ export default function CartoonStudio() {
     }
   }
 
-  function onPhoto(e) {
+  async function onPhoto(e) {
     const f = e.target.files?.[0];
     if (!f) return;
-    const r = new FileReader();
-    r.onload = () => setPhoto({ data: String(r.result).split(",")[1], url: r.result, type: f.type });
-    r.readAsDataURL(f);
+    setError("");
+    try {
+      setPhoto(await downscaleImage(f));
+    } catch (err) {
+      setError(err.message || "Couldn't read that photo. Try another.");
+    }
   }
 
   async function cartoonify() {
