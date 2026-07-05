@@ -1,0 +1,30 @@
+# Render Blueprint — deploy the app + Redis in one step.
+# In Render: New > Blueprint, point it at this repo, then set ANTHROPIC_API_KEY
+# (marked sync:false, so Render prompts for it) and Apply.
+services:
+  - type: web
+    name: cartoon-studio
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false # set in the Render dashboard; never committed
+      - key: ANTHROPIC_MODEL
+        value: claude-opus-4-8
+      - key: NODE_VERSION
+        value: "20"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: cartoon-studio-redis
+          property: connectionString
+
+  - type: redis
+    name: cartoon-studio-redis
+    plan: free
+    ipAllowList: [] # internal-only; reachable only from the web service
+    maxmemoryPolicy: noeviction

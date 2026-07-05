@@ -25,6 +25,20 @@ npm run web      # Vite only
 npm run server   # backend only
 ```
 
+## Deploy
+
+**Docker (app + Redis, one command):**
+
+```bash
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+docker compose up --build     # app on http://localhost:8787, Redis wired in
+```
+
+**Render (one click):** push this repo, then in Render choose **New → Blueprint**
+and point it at the repo. `render.yaml` provisions the web service **and** a Redis
+instance, wires `REDIS_URL` between them automatically, and prompts you for
+`ANTHROPIC_API_KEY`. Hit **Apply**.
+
 ## How it works
 
 The React front end (all in `src/CartoonStudio.jsx`) never talks to Anthropic

@@ -20,8 +20,19 @@ A React + Vite front end with a small Express backend proxy for the Claude API.
 - `vite.config.js` — Vite config with `@vitejs/plugin-react`; proxies `/api` to the backend in dev.
 - `server/index.js` — Express proxy that holds the API key and forwards to Claude (uses `@anthropic-ai/sdk`).
 - `.env.example` — template for the required `ANTHROPIC_API_KEY` (copy to `.env`, which is gitignored).
+- `Dockerfile` / `.dockerignore` — multi-stage build (build SPA → run prod deps + server).
+- `docker-compose.yml` — one-command app + Redis stack.
+- `render.yaml` — Render Blueprint (web service + Redis, `REDIS_URL` wired automatically).
 - `README.md` — project overview.
 - The default branch is `main`.
+
+## Deploy
+
+- **Docker:** `docker compose up --build` — builds the image, starts Redis, wires
+  `REDIS_URL=redis://redis:6379`, and reads `ANTHROPIC_API_KEY` from `.env`. App on `:8787`.
+- **Render:** `render.yaml` is a Blueprint — it provisions the Node web service and a
+  Redis instance, links `REDIS_URL` via `fromService`, and prompts for `ANTHROPIC_API_KEY`
+  (`sync: false`). The container/`npm start` serves the built SPA + API from Express.
 
 ## Setup, Build & Run
 
