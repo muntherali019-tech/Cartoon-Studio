@@ -150,9 +150,22 @@ const generateLimiter = rateLimit({
   message: { error: "Too many requests — give the studio a moment and try again." },
 });
 
+// Global daily ceiling across all callers, to bound total spend per day.
+// In-memory + per-process: for a single-instance deploy. Use a shared store
+// (e.g. rate-limit-redis) if you run multiple instances.
+const dailyLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_PER_DAY) || 500,
+  keyGenerator: () => "global",
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false, // static key is intentional (global counter)
+  message: { error: "The studio has hit its daily limit. Please try again tomorrow." },
+});
+
 // The only model endpoint. The client sends { action, ...params }; the server
 // builds the prompt, so the key AND the prompts stay server-side.
-app.post("/api/generate", generateLimiter, async (req, res) => {
+app.post("/api/generate", generateLimiter, dailyLimiter, async (req, res) => {
   if (!client) {
     return res
       .status(500)

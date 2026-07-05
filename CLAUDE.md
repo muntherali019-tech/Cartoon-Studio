@@ -49,14 +49,17 @@ parameters, never a `system` prompt or raw `messages`.
   the preset enums (`FORMATS`/`TONES`/`STYLES`), length caps, and image type/size,
   builds the system+user prompt server-side, then calls `client.messages.create(...)`
   and returns the raw Claude `Message` (front end reads `.content`). Rate-limited
-  per-IP (`express-rate-limit`, default 20/min, `RATE_LIMIT_PER_MIN`). The model is
-  fixed server-side via `ANTHROPIC_MODEL` (default `claude-opus-4-8`).
+  per-IP (`express-rate-limit`, default 20/min, `RATE_LIMIT_PER_MIN`) and by a
+  global daily ceiling (default 500/day, `RATE_LIMIT_PER_DAY`) to bound spend. The
+  model is fixed server-side via `ANTHROPIC_MODEL` (default `claude-opus-4-8`).
 - `GET /api/health` — reports `{ ok, hasKey, model }`.
 - Unknown `/api/*` routes return JSON `404`; other paths fall through to the SPA.
 - In production it also serves the built `dist/` SPA, so `npm start` runs everything.
 
 Config via env (`.env`): `ANTHROPIC_API_KEY` (required), `ANTHROPIC_MODEL`,
-`RATE_LIMIT_PER_MIN`, `PORT` (all optional; port default 8787).
+`RATE_LIMIT_PER_MIN`, `RATE_LIMIT_PER_DAY`, `PORT` (all optional; port default 8787).
+The rate-limit stores are in-memory/per-process — use a shared store (e.g.
+`rate-limit-redis`) if you run more than one instance.
 
 ## Architecture (`src/CartoonStudio.jsx`)
 
