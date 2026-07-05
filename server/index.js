@@ -16,7 +16,7 @@ const apiKey = process.env.ANTHROPIC_API_KEY;
 const client = apiKey ? new Anthropic({ apiKey }) : null;
 
 const app = express();
-app.use(express.json({ limit: "12mb" })); // photos arrive as base64
+app.use(express.json({ limit: "50mb" })); // photos arrive as base64
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, hasKey: Boolean(client), model: MODEL });
