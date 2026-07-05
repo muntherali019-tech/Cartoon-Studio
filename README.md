@@ -33,8 +33,9 @@ exposes `POST /api/generate`. The server **owns the prompts**: the client sends
 only an action (`script` / `panel` / `cartoon`) plus validated parameters, so the
 endpoint can't be abused as a generic Claude proxy. It's also rate-limited per IP
 (`RATE_LIMIT_PER_MIN`, default 20/min) and by a global daily cap
-(`RATE_LIMIT_PER_DAY`, default 500/day) to bound spend. Set the model with
-`ANTHROPIC_MODEL` (default `claude-opus-4-8`).
+(`RATE_LIMIT_PER_DAY`, default 500/day) to bound spend. Set `REDIS_URL` to share
+those limits across multiple instances (it falls back to in-memory otherwise).
+Set the model with `ANTHROPIC_MODEL` (default `claude-opus-4-8`).
 
 ## Tech stack
 

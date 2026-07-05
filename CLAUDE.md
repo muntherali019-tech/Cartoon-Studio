@@ -57,9 +57,13 @@ parameters, never a `system` prompt or raw `messages`.
 - In production it also serves the built `dist/` SPA, so `npm start` runs everything.
 
 Config via env (`.env`): `ANTHROPIC_API_KEY` (required), `ANTHROPIC_MODEL`,
-`RATE_LIMIT_PER_MIN`, `RATE_LIMIT_PER_DAY`, `PORT` (all optional; port default 8787).
-The rate-limit stores are in-memory/per-process — use a shared store (e.g.
-`rate-limit-redis`) if you run more than one instance.
+`RATE_LIMIT_PER_MIN`, `RATE_LIMIT_PER_DAY`, `REDIS_URL`, `PORT` (all optional; port
+default 8787).
+
+**Multi-instance rate limiting:** set `REDIS_URL` and both limiters use a shared
+`rate-limit-redis` store (prefixes `rl:min:` / `rl:day:`), so the caps hold across
+every instance. Without it — or if Redis is unreachable at startup — the server
+logs a warning and falls back to per-process in-memory counters.
 
 ## Architecture (`src/CartoonStudio.jsx`)
 
@@ -94,7 +98,7 @@ The component is a 4-stage, single-file pipeline with all styling done inline
 ## Dependencies
 
 - Front end: `react`, `react-dom`, `lucide-react`.
-- Backend: `express`, `express-rate-limit`, `@anthropic-ai/sdk`, `dotenv`.
+- Backend: `express`, `express-rate-limit`, `rate-limit-redis`, `redis`, `@anthropic-ai/sdk`, `dotenv`.
 - Build/dev: `vite`, `@vitejs/plugin-react`, `concurrently`.
 
 ## Conventions
