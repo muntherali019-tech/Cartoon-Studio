@@ -40,17 +40,23 @@ There is no test suite or linter configured yet.
 ## Backend proxy (`server/index.js`)
 
 The browser must never hold the Anthropic key, so all model calls go through a
-local proxy:
+local proxy. To keep the endpoint from being used as a generic Claude proxy, the
+**server owns every prompt** — the client sends only an action + validated
+parameters, never a `system` prompt or raw `messages`.
 
-- `POST /api/messages` — accepts `{ system, messages }`, calls
-  `client.messages.create(...)` with the server-side key, and returns the raw
-  Claude `Message` (the front end reads `.content`). The model is fixed server-side
-  via `ANTHROPIC_MODEL` (default `claude-opus-4-8`).
+- `POST /api/generate` — accepts `{ action, ...params }` where `action` is
+  `"script"`, `"panel"`, or `"cartoon"`. `buildRequest()` validates params against
+  the preset enums (`FORMATS`/`TONES`/`STYLES`), length caps, and image type/size,
+  builds the system+user prompt server-side, then calls `client.messages.create(...)`
+  and returns the raw Claude `Message` (front end reads `.content`). Rate-limited
+  per-IP (`express-rate-limit`, default 20/min, `RATE_LIMIT_PER_MIN`). The model is
+  fixed server-side via `ANTHROPIC_MODEL` (default `claude-opus-4-8`).
 - `GET /api/health` — reports `{ ok, hasKey, model }`.
+- Unknown `/api/*` routes return JSON `404`; other paths fall through to the SPA.
 - In production it also serves the built `dist/` SPA, so `npm start` runs everything.
 
-Config via env (`.env`): `ANTHROPIC_API_KEY` (required), `ANTHROPIC_MODEL` (optional),
-`PORT` (optional, default 8787).
+Config via env (`.env`): `ANTHROPIC_API_KEY` (required), `ANTHROPIC_MODEL`,
+`RATE_LIMIT_PER_MIN`, `PORT` (all optional; port default 8787).
 
 ## Architecture (`src/CartoonStudio.jsx`)
 
@@ -58,10 +64,10 @@ The component is a 4-stage, single-file pipeline with all styling done inline
 (no Tailwind/CSS files) using a fixed cartoon palette (`INK`, `PAPER`, `PINK`,
 `CYAN`, `SUN`, `MINT`).
 
-- **Claude API access** — `callClaude(messages, system)` POSTs to the local
-  `/api/messages` proxy (which injects the key); it never calls Anthropic
-  directly. `extractJSON(text)` strips markdown fences and parses the first JSON
-  object/array from a model reply.
+- **Claude API access** — `callAPI(action, params)` POSTs to the local
+  `/api/generate` proxy (which owns the prompts and injects the key); it never
+  calls Anthropic directly and never sends a prompt. `extractJSON(text)` strips
+  markdown fences and parses the first JSON object/array from a model reply.
 - **Stage 1 — Idea**: captures the idea plus `format`, `tone`, `style`, and
   `sceneCount` presets (`FORMATS`, `TONES`, `STYLES`).
 - **Stage 2 — Script**: `genScript()` asks the model for a titled, character-
@@ -85,7 +91,7 @@ The component is a 4-stage, single-file pipeline with all styling done inline
 ## Dependencies
 
 - Front end: `react`, `react-dom`, `lucide-react`.
-- Backend: `express`, `@anthropic-ai/sdk`, `dotenv`.
+- Backend: `express`, `express-rate-limit`, `@anthropic-ai/sdk`, `dotenv`.
 - Build/dev: `vite`, `@vitejs/plugin-react`, `concurrently`.
 
 ## Conventions

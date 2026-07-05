@@ -4,13 +4,18 @@ import {
   Loader2, Clapperboard, ScrollText, Camera, Check, X, RotateCcw
 } from "lucide-react";
 
-// ---------- Claude API (via the local /api proxy that holds the key) ----------
-async function callClaude(messages, system) {
-  const res = await fetch("/api/messages", {
+// ---------- Claude API (via the local /api proxy that holds the key + prompts) ----------
+// The client only picks presets and supplies the idea/photo; the server owns the
+// actual prompts, so this endpoint can't be used as a generic Claude proxy.
+async function callAPI(action, params) {
+  const res = await fetch("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ system, messages }),
+    body: JSON.stringify({ action, ...params }),
   });
+  if (res.status === 429) {
+    throw new Error("Whoa — too many requests. Give the studio a moment and try again.");
+  }
   if (!res.ok) throw new Error("The studio AI didn't respond. Try running that step again.");
   const data = await res.json();
   const text = (data.content || [])
@@ -181,30 +186,16 @@ export default function CartoonStudio() {
   };
 
   async function genScript() {
-    const sys =
-      "You are a cartoon scriptwriter for short faceless videos. Reply with ONLY raw JSON, no prose, no markdown fences. Keep it tight.";
-    const user =
-      `Write a ${format} in a ${tone} tone from this idea: "${idea}". ` +
-      `Use exactly ${sceneCount} scenes. JSON shape: ` +
-      `{"title":string,"logline":string (1 sentence),` +
-      `"characters":[{"name":string,"look":string (8-15 word visual descriptor for consistent art)}],` +
-      `"scenes":[{"n":number,"setting":string,"action":string (1-2 sentences),"line":string (the narration or key spoken line)}]}`;
-    const raw = await callClaude([{ role: "user", content: user }], sys);
+    const raw = await callAPI("script", { idea, format, tone, sceneCount });
     return extractJSON(raw);
   }
 
   async function genPanel(sc, chars) {
-    const sys =
-      "You are a storyboard artist and AI-image prompt engineer. Reply with ONLY raw JSON, no fences.";
-    const charLook = chars.map((c) => `${c.name}: ${c.look}`).join("; ");
-    const user =
-      `Art style: ${style}. Keep characters consistent using these looks -> ${charLook}. ` +
-      `Scene ${sc.n} setting: ${sc.setting}. Action: ${sc.action}. ` +
-      `JSON shape: {"visual":string (what the frame shows, 1 sentence),` +
-      `"imagePrompt":string (a detailed ready-to-paste image-gen prompt: include the art style, the character look, setting, lighting, framing),` +
-      `"shot":string (camera/shot e.g. 'wide establishing','close-up'),` +
-      `"narration":string (the voiceover line for this scene)}`;
-    const raw = await callClaude([{ role: "user", content: user }], sys);
+    const raw = await callAPI("panel", {
+      style,
+      characters: chars,
+      scene: { n: sc.n, setting: sc.setting, action: sc.action },
+    });
     return { n: sc.n, ...extractJSON(raw) };
   }
 
@@ -246,18 +237,10 @@ export default function CartoonStudio() {
     if (!photo) return;
     setPhotoBusy(true); setError(""); setPhotoPrompt("");
     try {
-      const sys =
-        "You look at a photo and write ONE detailed image-generation prompt to recreate the subject as a cartoon. Reply with ONLY the prompt text, no preamble, no quotes.";
-      const raw = await callClaude(
-        [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: photo.type || "image/jpeg", data: photo.data } },
-            { type: "text", text: `Recreate this as a cartoon in "${photoStyle}" style. Keep the subject recognisable. Describe face/clothing/pose/colours so an image model can render it.` },
-          ],
-        }],
-        sys
-      );
+      const raw = await callAPI("cartoon", {
+        photoStyle,
+        image: { type: photo.type || "image/jpeg", data: photo.data },
+      });
       setPhotoPrompt(raw.trim());
     } catch (e) {
       setError(e.message || "Couldn't read that photo. Try another.");

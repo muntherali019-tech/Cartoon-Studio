@@ -29,8 +29,11 @@ npm run server   # backend only
 
 The React front end (all in `src/CartoonStudio.jsx`) never talks to Anthropic
 directly — a small Express proxy in `server/index.js` holds the API key and
-exposes `POST /api/messages`. This keeps your key off the client. Set the model
-with `ANTHROPIC_MODEL` (default `claude-opus-4-8`).
+exposes `POST /api/generate`. The server **owns the prompts**: the client sends
+only an action (`script` / `panel` / `cartoon`) plus validated parameters, so the
+endpoint can't be abused as a generic Claude proxy. It's also rate-limited per IP
+(`RATE_LIMIT_PER_MIN`, default 20/min). Set the model with `ANTHROPIC_MODEL`
+(default `claude-opus-4-8`).
 
 ## Tech stack
 
