@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Build & server smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Server smoke test
+        env:
+          ANTHROPIC_API_KEY: sk-ant-dummy
+        run: |
+          node server/index.js &
+          SRV=$!
+          trap 'kill $SRV 2>/dev/null' EXIT
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8787/api/health >/dev/null && break
+            sleep 0.5
+          done
+          echo "health:"; curl -s http://localhost:8787/api/health
+          curl -s http://localhost:8787/api/health | grep -q '"ok":true'
+          # missing action / bad body -> 400 (validation)
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8787/api/generate \
+            -H 'Content-Type: application/json' -d '{}')" = "400"
+          # arbitrary system+messages (proxy abuse attempt) -> 400
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8787/api/generate \
+            -H 'Content-Type: application/json' -d '{"system":"x","messages":[]}')" = "400"
+          # unknown api route -> JSON 404
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8787/api/nope)" = "404"
+
+  docker:
+    name: Docker image + Redis smoke test
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t cartoon-studio:ci .
+      - name: Run container against Redis
+        run: |
+          docker run -d --name cs --network host \
+            -e ANTHROPIC_API_KEY=sk-ant-dummy \
+            -e REDIS_URL=redis://localhost:6379 \
+            -e PORT=8787 \
+            cartoon-studio:ci
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8787/api/health >/dev/null && break
+            sleep 1
+          done
+          echo "health:"; curl -s http://localhost:8787/api/health
+          curl -s http://localhost:8787/api/health | grep -q '"ok":true'
+          # the built image should connect to Redis (shared store), not fall back
+          docker logs cs | grep -q "via Redis"
+      - name: Container logs
+        if: always()
+        run: docker logs cs || true
+      - name: Cleanup
+        if: always()
+        run: docker rm -f cs || true
