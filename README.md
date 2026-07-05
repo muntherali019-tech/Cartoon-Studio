@@ -9,17 +9,30 @@ everything up to the render step.
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+cp .env.example .env      # then paste your ANTHROPIC_API_KEY
+npm run dev               # backend (:8787) + Vite dev server (:5173)
 ```
+
+Open http://localhost:5173. You'll need an Anthropic API key from
+[console.anthropic.com](https://console.anthropic.com/settings/keys).
 
 Other scripts:
 
 ```bash
 npm run build    # production build into dist/
-npm run preview  # preview the production build
+npm start        # serve the built app + API from Express (:8787)
+npm run web      # Vite only
+npm run server   # backend only
 ```
+
+## How it works
+
+The React front end (all in `src/CartoonStudio.jsx`) never talks to Anthropic
+directly — a small Express proxy in `server/index.js` holds the API key and
+exposes `POST /api/messages`. This keeps your key off the client. Set the model
+with `ANTHROPIC_MODEL` (default `claude-opus-4-8`).
 
 ## Tech stack
 
-React + Vite, with icons from `lucide-react`. The whole app lives in
-`src/CartoonStudio.jsx`.
+React + Vite (icons from `lucide-react`) on the front end; Express +
+`@anthropic-ai/sdk` on the backend.

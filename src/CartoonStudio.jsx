@@ -4,17 +4,12 @@ import {
   Loader2, Clapperboard, ScrollText, Camera, Check, X, RotateCcw
 } from "lucide-react";
 
-// ---------- in-artifact Claude API ----------
+// ---------- Claude API (via the local /api proxy that holds the key) ----------
 async function callClaude(messages, system) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch("/api/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      system,
-      messages,
-    }),
+    body: JSON.stringify({ system, messages }),
   });
   if (!res.ok) throw new Error("The studio AI didn't respond. Try running that step again.");
   const data = await res.json();
