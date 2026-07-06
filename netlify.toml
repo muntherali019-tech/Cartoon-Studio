@@ -1,0 +1,34 @@
+# Netlify deploy config. Connect the repo in Netlify and set ANTHROPIC_API_KEY
+# (Site settings > Environment variables). Netlify builds the SPA and serves the
+# /api/generate serverless function automatically.
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Route the app's API call to the serverless function.
+[[redirects]]
+  from = "/api/generate"
+  to = "/.netlify/functions/generate"
+  status = 200
+
+# --- Alternative: use the full Render backend (Express + Redis rate limits) ---
+# If you deploy the Render service too, comment out the redirect above and use
+# this instead to proxy every /api/* call to it (rate caps + daily ceiling apply):
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://YOUR-RENDER-APP.onrender.com/api/:splat"
+#   status = 200
+#   force = true
+
+# SPA fallback for client-side routing (must be last).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

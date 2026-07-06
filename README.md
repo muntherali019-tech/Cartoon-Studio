@@ -34,10 +34,19 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
 docker compose up --build     # app on http://localhost:8787, Redis wired in
 ```
 
-**Render (one click):** push this repo, then in Render choose **New → Blueprint**
-and point it at the repo. `render.yaml` provisions the web service **and** a Redis
-instance, wires `REDIS_URL` between them automatically, and prompts you for
-`ANTHROPIC_API_KEY`. Hit **Apply**.
+**Render (one click, full backend):** push this repo, then in Render choose
+**New → Blueprint** and point it at the repo. `render.yaml` provisions the web
+service **and** a Redis instance, wires `REDIS_URL` between them automatically, and
+prompts you for `ANTHROPIC_API_KEY`. Hit **Apply**. This is the full-featured
+backend (per-IP + daily rate caps shared via Redis).
+
+**Netlify (static + serverless):** connect the repo in Netlify and set
+`ANTHROPIC_API_KEY` in the site's environment variables. `netlify.toml` builds the
+SPA and serves `/api/generate` as a serverless function that reuses the same
+prompt-restriction/validation logic (`server/prompt.js`). Note: the serverless
+path does **not** enforce the rate caps (those need Redis) — for a public deploy,
+enable Netlify's platform rate limiting, or proxy `/api/*` to the Render backend
+(a commented-out redirect for this is included in `netlify.toml`).
 
 ## How it works
 

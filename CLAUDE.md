@@ -19,10 +19,13 @@ A React + Vite front end with a small Express backend proxy for the Claude API.
 - `index.html` — Vite HTML entry.
 - `vite.config.js` — Vite config with `@vitejs/plugin-react`; proxies `/api` to the backend in dev.
 - `server/index.js` — Express proxy that holds the API key and forwards to Claude (uses `@anthropic-ai/sdk`).
+- `server/prompt.js` — shared prompt-building + input validation (`buildRequest`, `BadInput`, preset enums), imported by both the Express server and the Netlify function so they never drift.
+- `netlify/functions/generate.js` — serverless equivalent of `POST /api/generate` (reuses `server/prompt.js`).
 - `.env.example` — template for the required `ANTHROPIC_API_KEY` (copy to `.env`, which is gitignored).
 - `Dockerfile` / `.dockerignore` — multi-stage build (build SPA → run prod deps + server).
 - `docker-compose.yml` — one-command app + Redis stack.
 - `render.yaml` — Render Blueprint (web service + Redis, `REDIS_URL` wired automatically).
+- `netlify.toml` — Netlify build + `/api/generate` function redirect + SPA fallback.
 - `README.md` — project overview.
 - The default branch is `main`.
 
@@ -33,6 +36,11 @@ A React + Vite front end with a small Express backend proxy for the Claude API.
 - **Render:** `render.yaml` is a Blueprint — it provisions the Node web service and a
   Redis instance, links `REDIS_URL` via `fromService`, and prompts for `ANTHROPIC_API_KEY`
   (`sync: false`). The container/`npm start` serves the built SPA + API from Express.
+  This is the full backend (rate caps + daily ceiling via Redis).
+- **Netlify:** `netlify.toml` builds the SPA and serves `/api/generate` as a serverless
+  function (`netlify/functions/generate.js`). It reuses `server/prompt.js` for identical
+  validation/prompts, but does **not** enforce rate limits (no Redis) — enable Netlify's
+  platform rate limiting or proxy `/api/*` to the Render backend for that.
 
 ## Setup, Build & Run
 
