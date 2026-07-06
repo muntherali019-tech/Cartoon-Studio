@@ -66,6 +66,17 @@ With those set, `git push` to `main` builds, tests, and deploys to both platform
 automatically. (Render's Blueprint can also auto-deploy on its own once connected —
 if you rely on that, you can omit `RENDER_DEPLOY_HOOK_URL`.)
 
+**Fast path — set the secrets in one command** (needs the [GitHub CLI](https://cli.github.com),
+`gh auth login`):
+
+```bash
+npm run go-live      # prompts for the three secrets and stores them in the repo
+```
+
+**Pull requests** get an automatic **Netlify preview** deploy (a draft build, gated
+behind passing tests) with the preview URL posted as a comment on the PR — so you
+can click through changes before they reach production.
+
 ## How it works
 
 The React front end (all in `src/CartoonStudio.jsx`) never talks to Anthropic
