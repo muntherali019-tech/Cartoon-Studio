@@ -48,6 +48,24 @@ path does **not** enforce the rate caps (those need Redis) — for a public depl
 enable Netlify's platform rate limiting, or proxy `/api/*` to the Render backend
 (a commented-out redirect for this is included in `netlify.toml`).
 
+### Auto-deploy on push (no dashboard step per deploy)
+
+The `deploy` job in `.github/workflows/ci.yml` runs **only on push to `main`, and
+only after the build + Docker tests pass**. Each step self-skips if its secret is
+missing, so nothing deploys until you add the secrets below under
+**Repo → Settings → Secrets and variables → Actions**. Do **not** paste tokens in
+chat — put them straight into GitHub Secrets.
+
+| Secret | Where to get it | One-time setup |
+|---|---|---|
+| `NETLIFY_AUTH_TOKEN` | Netlify → User settings → Applications → **New access token** | — |
+| `NETLIFY_SITE_ID` | Create the site once (`npx netlify-cli sites:create`, or the dashboard) → the site's **API ID** | Set `ANTHROPIC_API_KEY` in the site's env vars |
+| `RENDER_DEPLOY_HOOK_URL` | Render service → Settings → **Deploy Hook** (create the service once from `render.yaml`) | Blueprint prompts for `ANTHROPIC_API_KEY` |
+
+With those set, `git push` to `main` builds, tests, and deploys to both platforms
+automatically. (Render's Blueprint can also auto-deploy on its own once connected —
+if you rely on that, you can omit `RENDER_DEPLOY_HOOK_URL`.)
+
 ## How it works
 
 The React front end (all in `src/CartoonStudio.jsx`) never talks to Anthropic

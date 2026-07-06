@@ -76,3 +76,29 @@ jobs:
       - name: Cleanup
         if: always()
         run: docker rm -f cs || true
+
+  deploy:
+    name: Deploy (prod)
+    needs: [build, docker] # only deploy if the whole test suite passed
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      # Add these as repo secrets (Settings > Secrets and variables > Actions).
+      # Each step self-skips if its secret is absent, so this job is a safe no-op
+      # until you provide them.
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Deploy to Netlify
+        if: env.NETLIFY_AUTH_TOKEN != '' && env.NETLIFY_SITE_ID != ''
+        run: npx --yes netlify-cli deploy --build --prod
+      - name: Trigger Render deploy
+        if: env.RENDER_DEPLOY_HOOK_URL != ''
+        run: curl -fsSL -X POST "$RENDER_DEPLOY_HOOK_URL"
