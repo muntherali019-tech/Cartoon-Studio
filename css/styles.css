@@ -169,6 +169,28 @@ h2 { font-size: 1.75rem; margin: 0 0 1.5rem; }
   outline: 2px solid var(--accent);
   border-color: transparent;
 }
+.contact-form input.invalid,
+.contact-form textarea.invalid {
+  border-color: #d93a5b;
+}
+.contact-form input.invalid:focus,
+.contact-form textarea.invalid:focus {
+  outline-color: #d93a5b;
+}
+
+.field-error {
+  color: #d93a5b;
+  font-weight: 500;
+  font-size: 0.85rem;
+  min-height: 1em;
+}
+
+.form-status {
+  margin: 0;
+  font-weight: 600;
+}
+.form-status.success { color: #1a7f4b; }
+.form-status.error { color: #d93a5b; }
 
 .site-footer {
   border-top: 1px solid #eceaf5;

@@ -26,4 +26,4 @@ python3 -m http.server 8000
 Outstanding work is tracked with `TODO` comments in the source:
 
 - Load gallery images dynamically from a data source.
-- Validate the contact form and submit it to a backend endpoint.
+- POST the (already validated) contact enquiry to a real backend endpoint.

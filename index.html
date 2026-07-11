@@ -79,18 +79,21 @@
       <form class="contact-form" id="contact-form" novalidate>
         <label>
           Name
-          <input type="text" name="name" required />
+          <input type="text" name="name" required aria-describedby="name-error" />
+          <span class="field-error" id="name-error" role="alert"></span>
         </label>
         <label>
           Email
-          <input type="email" name="email" required />
+          <input type="email" name="email" required aria-describedby="email-error" />
+          <span class="field-error" id="email-error" role="alert"></span>
         </label>
         <label>
           Tell us about your project
-          <textarea name="message" rows="4" required></textarea>
+          <textarea name="message" rows="4" required aria-describedby="message-error"></textarea>
+          <span class="field-error" id="message-error" role="alert"></span>
         </label>
-        <!-- TODO: validate form fields and submit to a backend endpoint -->
         <button class="btn btn-primary" type="submit">Send enquiry</button>
+        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
       </form>
     </section>
   </main>
