@@ -1,0 +1,11 @@
+{
+  "name": "cartoon-studio",
+  "version": "1.0.0",
+  "description": "AI cartoon studio marketing site — live generator, revenue tools, and test suite.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node tests/run.mjs"
+  }
+}
