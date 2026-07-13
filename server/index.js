@@ -6,6 +6,7 @@ import { aiStatus, aiEnabled, generateJSON, generateText, visionExtract } from "
 import {
   signup, login, attachUser, publicUser,
   spendCredit, refundCredit, setCharacterKit, isPremium,
+  addToGallery, removeFromGallery, getGallery,
 } from "./auth.js";
 import {
   stripeEnabled, creditPacksEnabled,
@@ -82,6 +83,26 @@ app.post("/api/characterkit", wrap(async (req, res) => {
   } catch (e) {
     res.status(403).json({ error: e.message });
   }
+}));
+
+// ---------- gallery ("My Creations") ----------
+app.get("/api/gallery", (req, res) => {
+  if (!req.user) return res.status(401).json({ error: "Sign in first" });
+  res.json({ items: getGallery(req.user) });
+});
+app.post("/api/gallery", wrap(async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: "Sign in first" });
+  try {
+    const items = await addToGallery(req.user, req.body || {});
+    res.json({ items });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+}));
+app.delete("/api/gallery/:id", wrap(async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: "Sign in first" });
+  const items = await removeFromGallery(req.user, req.params.id);
+  res.json({ items });
 }));
 
 // ---------- billing ----------
