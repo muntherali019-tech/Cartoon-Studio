@@ -14,6 +14,9 @@ import {
 import {
   buildLineItems, stripeForm, buildSessionParams, createCheckoutSession,
 } from "../server/checkout.js";
+import {
+  parseSignatureHeader, computeSignature, verifyStripeSignature, handleEvent,
+} from "../server/webhook.js";
 
 export const tests = {
   "hashString is deterministic and unsigned"() {
@@ -240,5 +243,63 @@ export const tests = {
       ),
       /stripe 402/
     );
+  },
+
+  "parseSignatureHeader extracts timestamp and v1 signatures"() {
+    const p = parseSignatureHeader("t=1700000000,v1=abc,v1=def");
+    assert.equal(p.t, 1700000000);
+    assert.deepEqual(p.v1, ["abc", "def"]);
+    assert.deepEqual(parseSignatureHeader(null), { t: null, v1: [] });
+  },
+
+  "verifyStripeSignature accepts a correctly signed payload"() {
+    const secret = "whsec_test";
+    const t = 1700000000;
+    const body = JSON.stringify({ id: "evt_1", type: "checkout.session.completed" });
+    const header = `t=${t},v1=${computeSignature(body, t, secret)}`;
+    const event = verifyStripeSignature(body, header, secret, { now: t });
+    assert.equal(event.id, "evt_1");
+  },
+
+  "verifyStripeSignature rejects forged, stale and malformed events"() {
+    const secret = "whsec_test";
+    const t = 1700000000;
+    const body = JSON.stringify({ id: "evt_1" });
+    const good = computeSignature(body, t, secret);
+
+    // wrong signature
+    assert.throws(() => verifyStripeSignature(body, `t=${t},v1=deadbeef`, secret, { now: t }), /mismatch/);
+    // signed with a different secret
+    assert.throws(() => verifyStripeSignature(body, `t=${t},v1=${good}`, "whsec_other", { now: t }), /mismatch/);
+    // stale timestamp beyond tolerance
+    assert.throws(() => verifyStripeSignature(body, `t=${t},v1=${good}`, secret, { now: t + 10000 }), /tolerance/);
+    // tampered body no longer matches the signature
+    assert.throws(() => verifyStripeSignature(body + " ", `t=${t},v1=${good}`, secret, { now: t }), /mismatch/);
+    // missing header / secret
+    assert.throws(() => verifyStripeSignature(body, "", secret, { now: t }), /bad signature header/);
+    assert.throws(() => verifyStripeSignature(body, `t=${t},v1=${good}`, "", { now: t }), /missing webhook secret/);
+  },
+
+  async "handleEvent fulfils only paid checkout sessions"() {
+    let fulfilledId = null;
+    const fulfil = (s) => { fulfilledId = s.id; };
+
+    const paid = await handleEvent(
+      { type: "checkout.session.completed", data: { object: { id: "cs_1", payment_status: "paid" } } },
+      { fulfil }
+    );
+    assert.equal(paid.fulfilled, true);
+    assert.equal(fulfilledId, "cs_1");
+
+    fulfilledId = null;
+    const unpaid = await handleEvent(
+      { type: "checkout.session.completed", data: { object: { id: "cs_2", payment_status: "unpaid" } } },
+      { fulfil }
+    );
+    assert.equal(unpaid.fulfilled, false);
+    assert.equal(fulfilledId, null, "unpaid sessions must not fulfil");
+
+    const other = await handleEvent({ type: "payment_intent.created", data: { object: {} } }, { fulfil });
+    assert.equal(other.handled, false);
   },
 };

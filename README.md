@@ -108,6 +108,23 @@ price) to the API, which **recomputes the amount server-side** from
 `checkoutApiBase` is set, these flows stay as demo confirmations. The endpoint
 returns `503` if `STRIPE_SECRET_KEY` is unset, so nothing charges by accident.
 
+### Fulfilment webhook
+
+Stripe notifies the server once a payment succeeds. The same server exposes
+`POST /api/stripe-webhook`, which **verifies the Stripe signature** over the
+raw body (HMAC-SHA256, constant-time compare, 5-minute replay tolerance) before
+acting — unverified events get a `400` and are never fulfilled. Configure the
+signing secret from your Stripe webhook endpoint:
+
+```sh
+STRIPE_SECRET_KEY=sk_live_… STRIPE_WEBHOOK_SECRET=whsec_… \
+  PUBLIC_BASE_URL=https://cartoonstudio.co.uk npm run serve:api
+```
+
+Wire the `fulfilOrder(session)` seam in `server/index.js` to grant the license,
+queue the print, and email the buyer. It only fires for `checkout.session
+.completed` events with `payment_status: "paid"`.
+
 ### Real render model
 
 Set credentials in `js/lib/backends.js` (`RENDER_CONFIG`) — ideally via a
@@ -116,5 +133,5 @@ hosted image model (OpenAI / Stability / Replicate) instead of the demo engine.
 
 ## Roadmap
 
-- Verify Stripe webhooks server-side to fulfil orders after payment.
+- Wire `fulfilOrder()` to real systems (license issuance, print queue, email).
 - Persist the style-pack cart across sessions.

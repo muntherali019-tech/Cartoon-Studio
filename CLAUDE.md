@@ -30,11 +30,15 @@ codebase.
   - `payments.js` — Formspree (contact) + Stripe Payment Link config and
     helpers; all keyless and safe for a static site, with demo fallbacks.
   - `validate.js` — form validators.
-- `server/` — optional, dependency-free Node checkout API:
+- `server/` — optional, dependency-free Node payments API:
   - `checkout.js` — pure builders: line items (recomputed from `pricing.js`),
     Stripe form encoding, and `createCheckoutSession`.
-  - `index.js` — `http` server exposing `POST /api/checkout`; reads
-    `STRIPE_SECRET_KEY` from the env and returns `503` if unset.
+  - `webhook.js` — Stripe signature verification (HMAC-SHA256, timing-safe,
+    replay tolerance) and paid-session fulfilment dispatch.
+  - `index.js` — `http` server exposing `POST /api/checkout` and
+    `POST /api/stripe-webhook`; reads `STRIPE_SECRET_KEY` /
+    `STRIPE_WEBHOOK_SECRET` from the env and returns `503` if unset. The
+    webhook is verified on the raw body before any fulfilment.
 - `tests/` — `unit.test.mjs` (pure logic, incl. server builders),
   `e2e.test.mjs` (Playwright), `run.mjs` (runner: unit + static server + e2e).
 
@@ -70,7 +74,8 @@ the e2e phase gracefully if no browser is available; unit tests always run.
 - Dynamic-amount flows (license quote, print order, cart) go through the
   `server/` checkout API when `payments.checkoutApiBase` is set; the server
   recomputes prices from `pricing.js` so the client never sends an amount.
-- Remaining: verify Stripe webhooks server-side to fulfil orders after payment.
+- Paid orders are confirmed via a signature-verified Stripe webhook; the
+  `fulfilOrder()` seam in `server/index.js` is where real fulfilment goes.
 - The default branch is `main`.
 
 ## Conventions
