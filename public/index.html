@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#141821" />
+    <title>Cartoon Studio — turn any idea into cartoons, comics & stickers</title>
+    <meta name="description" content="Cartoon Studio is the AI studio that turns a prompt or a photo into cartoons, comic strips, characters and sticker packs — then exports them. Free to start." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FF5C7A'/%3E%3Ctext x='50' y='72' font-size='60' text-anchor='middle'%3E%F0%9F%8E%A8%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="#top"><span class="logo">🎨</span> Cartoon Studio</a>
+      <nav class="nav-links">
+        <a href="#studio">Studio</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a class="btn btn-ghost" id="statusPill" href="#studio">●</a>
+        <button class="btn btn-ghost" id="accountBtn">Sign in</button>
+        <a class="btn btn-primary" href="#studio">Open studio</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <!-- HERO -->
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">AI cartoon • comic • sticker studio</p>
+          <h1>Turn any idea into a cartoon.</h1>
+          <p class="sub">
+            Type an idea or drop a photo. Cartoon Studio draws the character, writes
+            the <em>comic</em>, and mints a matching sticker pack — ready to post,
+            print or sell.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary btn-lg" href="#studio">Start drawing — free</a>
+            <a class="btn btn-ghost btn-lg" href="#features">See features</a>
+          </div>
+          <p class="trust">No card needed · Renders in your browser · Export in one click</p>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="frame"><canvas id="heroCanvas" width="440" height="440"></canvas></div>
+        </div>
+      </section>
+
+      <!-- STUDIO -->
+      <section id="studio" class="studio">
+        <div class="studio-head">
+          <h2>The Studio</h2>
+          <div class="tabs" id="tabs">
+            <button class="tab active" data-tab="cartoon">🎨 Cartoon</button>
+            <button class="tab" data-tab="comic">📖 Comic <span class="pro-dot">PRO</span></button>
+            <button class="tab" data-tab="character">🦸 Character</button>
+            <button class="tab" data-tab="stickers">🧩 Stickers <span class="pro-dot">PRO</span></button>
+            <button class="tab" data-tab="toonify">📷 Toonify</button>
+            <button class="tab" data-tab="kit">🎭 Kit <span class="pro-dot">PRO</span></button>
+            <button class="tab" data-tab="captions">💬 Captions</button>
+          </div>
+        </div>
+
+        <!-- CARTOON -->
+        <div class="panel active" data-panel="cartoon">
+          <div class="panel-grid">
+            <div class="controls card">
+              <label class="field"><span>Describe your cartoon</span>
+                <textarea id="artPrompt" rows="3" placeholder="e.g. a grumpy cat in a tiny wizard hat, refusing to do magic"></textarea></label>
+              <label class="field"><span>Art style</span>
+                <select id="artStyle">
+                  <option value="">Surprise me</option>
+                  <option>1990s Saturday-morning cartoon, bold outlines, flat cel shading</option>
+                  <option>modern flat vector, clean shapes, soft gradients</option>
+                  <option>classic newspaper comic strip, ink lines, halftone dots</option>
+                  <option>Ghibli-soft watercolour, warm light, gentle edges</option>
+                  <option>bold American comic ink, dynamic shadows, pop colours</option>
+                </select></label>
+              <button class="btn btn-primary btn-block" id="artBtn">✨ Draw it</button>
+              <p class="hint" id="artHint"></p>
+            </div>
+            <div class="preview card center">
+              <canvas id="artStage" width="600" height="600"></canvas>
+              <div class="player-bar">
+                <button class="btn btn-ghost" id="artDownload">⬇ Download PNG</button>
+              </div>
+              <p class="cap" id="artCaption"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMIC -->
+        <div class="panel" data-panel="comic">
+          <div class="card">
+            <div class="panel-title"><div>
+              <h3>Comic Strip Studio <span class="pill-pro">Creator+</span></h3>
+              <p class="muted">One idea → a full multi-panel comic with dialogue, drawn and lettered.</p>
+            </div></div>
+            <div class="row3">
+              <label class="field span2"><span>Comic idea</span>
+                <input id="comicIdea" placeholder="e.g. my cat negotiating breakfast at 5am" /></label>
+              <label class="field"><span>Panels: <b id="comicCountLabel">4</b></span>
+                <input id="comicCount" type="range" min="2" max="6" step="1" value="4" /></label>
+            </div>
+            <button class="btn btn-primary" id="comicBtn">📖 Draw the strip</button>
+            <p class="hint" id="comicHint"></p>
+            <div id="comicOut" class="comic-out"></div>
+          </div>
+        </div>
+
+        <!-- CHARACTER -->
+        <div class="panel" data-panel="character">
+          <div class="panel-grid">
+            <div class="controls card">
+              <label class="field"><span>Describe your character</span>
+                <textarea id="charDesc" rows="3" placeholder="e.g. a brave little dumpling knight with a toothpick sword"></textarea></label>
+              <button class="btn btn-primary btn-block" id="charBtn">🦸 Design character</button>
+              <p class="hint" id="charHint"></p>
+            </div>
+            <div class="preview card center">
+              <canvas id="charStage" width="600" height="600"></canvas>
+              <div id="charSheet" class="char-sheet"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STICKERS -->
+        <div class="panel" data-panel="stickers">
+          <div class="card">
+            <div class="panel-title"><div>
+              <h3>Sticker Pack Studio <span class="pill-pro">Creator+</span></h3>
+              <p class="muted">Turn one character into a matching set of expression stickers.</p>
+            </div></div>
+            <div class="row3">
+              <label class="field span2"><span>Character</span>
+                <input id="stickChar" placeholder="e.g. Biscuit, the smug orange cat" /></label>
+              <label class="field"><span>Stickers: <b id="stickCountLabel">6</b></span>
+                <input id="stickCount" type="range" min="3" max="8" step="1" value="6" /></label>
+            </div>
+            <button class="btn btn-primary" id="stickBtn">🧩 Make pack</button>
+            <p class="hint" id="stickHint"></p>
+            <div id="stickOut" class="sticker-grid"></div>
+          </div>
+        </div>
+
+        <!-- TOONIFY -->
+        <div class="panel" data-panel="toonify">
+          <div class="panel-grid">
+            <div class="controls card">
+              <p class="muted">Drop a photo — Cartoon Studio reads it and redraws it as a cartoon that still looks like you.</p>
+              <input type="file" id="toonFile" accept="image/*" />
+              <label class="field"><span>Style (optional)</span>
+                <select id="toonStyle">
+                  <option value="">Surprise me</option>
+                  <option>1990s Saturday-morning cartoon, bold outlines, flat cel shading</option>
+                  <option>modern flat vector, clean shapes, soft gradients</option>
+                  <option>Ghibli-soft watercolour, warm light, gentle edges</option>
+                </select></label>
+              <button class="btn btn-primary btn-block" id="toonBtn">📷 Toonify</button>
+              <p class="hint" id="toonHint"></p>
+            </div>
+            <div class="preview card center">
+              <canvas id="toonStage" width="600" height="600"></canvas>
+              <button class="btn btn-ghost" id="toonDownload">⬇ Download PNG</button>
+              <p class="cap" id="toonCaption"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHARACTER KIT -->
+        <div class="panel" data-panel="kit">
+          <div class="card">
+            <div class="panel-title"><div>
+              <h3>Character Kit <span class="pill-pro">Creator+</span></h3>
+              <p class="muted">Lock your character's look once — every cartoon, comic and sticker stays on-model.</p>
+            </div></div>
+            <div class="panel-grid">
+              <div class="controls">
+                <label class="field"><span>Character name</span><input id="kitName" placeholder="Biscuit" /></label>
+                <label class="field"><span>Art style</span><input id="kitStyle" placeholder="modern flat vector, clean shapes" /></label>
+                <div class="row3">
+                  <label class="field"><span>Primary</span><input id="kitPrimary" type="color" value="#FF5C7A" /></label>
+                  <label class="field"><span>Secondary</span><input id="kitSecondary" type="color" value="#5B8CFF" /></label>
+                  <label class="field"><span>Outline</span><input id="kitOutline" type="color" value="#141821" /></label>
+                </div>
+                <label class="field"><span>Signature traits (how the AI should draw it)</span>
+                  <textarea id="kitTraits" rows="3" placeholder="e.g. round huggable body, oversized eyes, tiny wizard hat, always smug"></textarea></label>
+                <button class="btn btn-primary btn-block" id="kitSave">💾 Save character kit</button>
+                <p class="hint" id="kitHint"></p>
+              </div>
+              <div class="preview center">
+                <canvas id="kitStage" width="600" height="600"></canvas>
+                <span class="muted" style="font-size:12px">Live kit preview</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CAPTIONS -->
+        <div class="panel" data-panel="captions">
+          <div class="card">
+            <p class="muted">Need words for your cartoon? Get scroll-stopping caption and meme lines.</p>
+            <div class="row">
+              <input id="capTopic" placeholder="e.g. working from home with a cat" />
+              <button class="btn btn-primary" id="capBtn">💬 Write captions</button>
+            </div>
+            <pre class="output" id="capOut"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURES -->
+      <section id="features" class="features">
+        <h2>A whole animation team in your browser</h2>
+        <div class="feature-grid" id="featureGrid"></div>
+      </section>
+
+      <!-- PRICING -->
+      <section id="pricing" class="pricing">
+        <h2>Pricing that scales with your studio</h2>
+        <div class="plans" id="plans"></div>
+
+        <div class="packs-wrap" id="packsWrap" hidden>
+          <h3 class="packs-title">Need a top-up? Grab a credit pack</h3>
+          <p class="muted center-text">One-time purchase, never expires. Perfect for a big drop.</p>
+          <div class="packs" id="packs"></div>
+        </div>
+
+        <div class="referral" id="referralCard" hidden>
+          <div>
+            <h3>Give 15 credits, get 15 credits</h3>
+            <p class="muted">Share your link. When a friend joins, you both get 15 bonus credits — instantly.</p>
+          </div>
+          <div class="referral-share">
+            <input id="referralLink" readonly />
+            <button class="btn btn-primary" id="referralCopy">Copy link</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span>🎨 Cartoon Studio</span>
+      <span class="muted">Draw something today.</span>
+    </footer>
+
+    <!-- AUTH MODAL -->
+    <div class="modal" id="authModal" hidden>
+      <div class="modal-card">
+        <button class="modal-x" id="authClose">✕</button>
+        <h3 id="authTitle">Sign in to Cartoon Studio</h3>
+        <p class="muted" id="authSub">Sign in to track credits and unlock premium tools.</p>
+        <label class="field"><span>Email</span><input id="authEmail" type="email" placeholder="you@email.com" /></label>
+        <label class="field"><span>Password</span><input id="authPass" type="password" placeholder="••••••" /></label>
+        <button class="btn btn-primary btn-block" id="authSubmit">Sign in</button>
+        <p class="hint" id="authError"></p>
+        <p class="muted switch-line"><span id="authSwitchText">New here?</span> <a href="#" id="authSwitch">Create an account</a></p>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
