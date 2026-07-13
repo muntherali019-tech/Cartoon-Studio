@@ -11,6 +11,9 @@ import {
 import {
   formspreeEndpoint, planLinkKey, packLinkKey, paymentLink, submitContact,
 } from "../js/lib/payments.js";
+import {
+  buildLineItems, stripeForm, buildSessionParams, createCheckoutSession,
+} from "../server/checkout.js";
 
 export const tests = {
   "hashString is deterministic and unsigned"() {
@@ -172,6 +175,70 @@ export const tests = {
     await assert.rejects(
       () => submitContact({ name: "A" }, { formspreeId: "form99" }, fakeFetch),
       /formspree 500/
+    );
+  },
+
+  "buildLineItems recomputes amounts server-side in pence"() {
+    const print = buildLineItems({ kind: "print", product: "canvas", size: "l", qty: 3 });
+    assert.equal(print.length, 1);
+    assert.equal(print[0].quantity, 3);
+    assert.ok(Number.isInteger(print[0].amount) && print[0].amount > 0);
+
+    const cart = buildLineItems({ kind: "cart", items: [{ id: "anime", qty: 2 }, { id: "8bit", qty: 1 }] });
+    assert.equal(cart.length, 2);
+    assert.equal(cart[0].amount, 12 * 100); // Anime Deluxe £12 -> pence
+
+    const quote = buildLineItems({ kind: "quote", scope: "packaging", reach: "global", assets: 2 });
+    assert.equal(quote.length, 1);
+    assert.equal(quote[0].quantity, 1);
+  },
+
+  "buildLineItems rejects bad input"() {
+    assert.throws(() => buildLineItems({ kind: "print", product: "nope" }), /unknown product/);
+    assert.throws(() => buildLineItems({ kind: "cart", items: [] }), /empty cart/);
+    assert.throws(() => buildLineItems({ kind: "cart", items: [{ id: "ghost" }] }), /unknown pack/);
+    assert.throws(() => buildLineItems({ kind: "mystery" }), /unknown checkout kind/);
+  },
+
+  "stripeForm encodes nested params the way Stripe expects"() {
+    const encoded = stripeForm(buildSessionParams(
+      [{ name: "Art print (m)", amount: 1800, quantity: 2 }],
+      { successUrl: "https://x/s", cancelUrl: "https://x/c" }
+    ));
+    assert.match(encoded, /mode=payment/);
+    assert.match(encoded, /line_items%5B0%5D%5Bprice_data%5D%5Bunit_amount%5D=1800/);
+    assert.match(encoded, /line_items%5B0%5D%5Bquantity%5D=2/);
+    assert.match(encoded, /product_data%5D%5Bname%5D=Art%20print/);
+  },
+
+  async "createCheckoutSession posts to Stripe and returns the url"() {
+    let seen;
+    const fakeFetch = (url, opts) => {
+      seen = { url, opts };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: "cs_1", url: "https://checkout.stripe.com/cs_1" }) });
+    };
+    const out = await createCheckoutSession(
+      { kind: "print", product: "print", size: "m", qty: 1 },
+      { apiKey: "sk_test", successUrl: "https://x/s", cancelUrl: "https://x/c", fetchImpl: fakeFetch }
+    );
+    assert.equal(out.url, "https://checkout.stripe.com/cs_1");
+    assert.match(seen.url, /\/v1\/checkout\/sessions$/);
+    assert.equal(seen.opts.headers.Authorization, "Bearer sk_test");
+    assert.match(seen.opts.headers["Content-Type"], /x-www-form-urlencoded/);
+  },
+
+  async "createCheckoutSession requires a secret key and surfaces stripe errors"() {
+    await assert.rejects(
+      () => createCheckoutSession({ kind: "print", product: "print" }, { apiKey: "" }),
+      /missing Stripe secret key/
+    );
+    const failFetch = () => Promise.resolve({ ok: false, status: 402, text: () => Promise.resolve("card_declined") });
+    await assert.rejects(
+      () => createCheckoutSession(
+        { kind: "print", product: "print", size: "m", qty: 1 },
+        { apiKey: "sk_test", successUrl: "s", cancelUrl: "c", fetchImpl: failFetch }
+      ),
+      /stripe 402/
     );
   },
 };

@@ -30,16 +30,22 @@ codebase.
   - `payments.js` — Formspree (contact) + Stripe Payment Link config and
     helpers; all keyless and safe for a static site, with demo fallbacks.
   - `validate.js` — form validators.
-- `tests/` — `unit.test.mjs` (pure logic), `e2e.test.mjs` (Playwright),
-  `run.mjs` (runner: unit tests + static server + e2e).
+- `server/` — optional, dependency-free Node checkout API:
+  - `checkout.js` — pure builders: line items (recomputed from `pricing.js`),
+    Stripe form encoding, and `createCheckoutSession`.
+  - `index.js` — `http` server exposing `POST /api/checkout`; reads
+    `STRIPE_SECRET_KEY` from the env and returns `503` if unset.
+- `tests/` — `unit.test.mjs` (pure logic, incl. server builders),
+  `e2e.test.mjs` (Playwright), `run.mjs` (runner: unit + static server + e2e).
 
 ## Build & Run
 
 No build step and no runtime dependencies for the site.
 
 ```sh
-npm start   # python3 -m http.server 8000
-npm test    # unit tests, then Playwright e2e against a temp static server
+npm start       # python3 -m http.server 8000
+npm run serve:api  # optional: node server/index.js (Stripe checkout API)
+npm test        # unit tests, then Playwright e2e against a temp static server
 ```
 
 The test runner resolves Playwright from a local or global install and skips
@@ -61,8 +67,10 @@ the e2e phase gracefully if no browser is available; unit tests always run.
 - Working `package.json` with `start` and `test` scripts.
 - Contact form delivers via Formspree and plan checkout redirects to Stripe
   Payment Links once configured in `payments.js` (both keyless / static-safe).
-- Remaining: a server-side Stripe Checkout Session for dynamic-amount flows
-  (license quote, print order, multi-item cart).
+- Dynamic-amount flows (license quote, print order, cart) go through the
+  `server/` checkout API when `payments.checkoutApiBase` is set; the server
+  recomputes prices from `pricing.js` so the client never sends an amount.
+- Remaining: verify Stripe webhooks server-side to fulfil orders after payment.
 - The default branch is `main`.
 
 ## Conventions

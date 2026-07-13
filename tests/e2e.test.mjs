@@ -77,7 +77,9 @@ export async function runE2E(chromium, baseURL) {
     const after = await page.textContent("#quote-result .quote-total");
     assert.notEqual(before, after);
     await page.click('#quote-form button[type="submit"]');
-    assert.match(await page.textContent("#quote-status"), /Quote locked/);
+    await page.waitForFunction(() =>
+      /Quote locked/.test(document.getElementById("quote-status").textContent)
+    );
   });
 
   await run("print shop prices and orders", async (page) => {
@@ -85,7 +87,9 @@ export async function runE2E(chromium, baseURL) {
     await page.fill('#print-form input[name="qty"]', "10");
     assert.match(await page.textContent("#print-result .quote-sub"), /bulk discount/);
     await page.click('#print-form button[type="submit"]');
-    assert.match(await page.textContent("#print-status"), /Order placed/);
+    await page.waitForFunction(() =>
+      /Order ready/.test(document.getElementById("print-status").textContent)
+    );
   });
 
   await run("style-pack store adds to cart", async (page) => {

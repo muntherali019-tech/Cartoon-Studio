@@ -10,7 +10,7 @@ import {
   STYLE_PACKS, cartTotal,
 } from "./lib/pricing.js";
 import { GALLERY, TESTIMONIALS, STATS, FEATURES } from "./data.js";
-import { submitContact, paymentLink, planLinkKey } from "./lib/payments.js";
+import { submitContact, paymentLink, planLinkKey, startCheckout } from "./lib/payments.js";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -306,7 +306,18 @@ function initQuote() {
   );
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    flash($("#quote-status"), `Quote locked at ${money(Number(form.dataset.total))}. We've emailed you the license summary.`);
+    checkoutOrDemo(
+      {
+        kind: "quote",
+        scope: form.scope.value,
+        reach: form.reach.value,
+        assets: Number(form.assets.value) || 1,
+        exclusive: form.exclusive.checked,
+        rush: form.rush.checked,
+      },
+      $("#quote-status"),
+      `Quote locked at ${money(Number(form.dataset.total))}. Add a checkout API to take payment live.`
+    );
   });
   compute();
 }
@@ -344,7 +355,11 @@ function initStore() {
 
   $("#cart-checkout")?.addEventListener("click", () => {
     if (!cart.length) return flash($("#store-status"), "Your cart is empty — add a style pack first.");
-    flash($("#store-status"), `Checking out ${cart.reduce((n, i) => n + i.qty, 0)} pack(s) for ${money(cartTotal(cart))}…`);
+    checkoutOrDemo(
+      { kind: "cart", items: cart.map((i) => ({ id: i.id, qty: i.qty })) },
+      $("#store-status"),
+      `Checking out ${cart.reduce((n, i) => n + i.qty, 0)} pack(s) for ${money(cartTotal(cart))}… Add a checkout API to take payment live.`
+    );
   });
 }
 
@@ -369,7 +384,16 @@ function initPrintShop() {
   $$("input, select", form).forEach((i) => i.addEventListener("input", compute));
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    flash($("#print-status"), `Order placed — ${money(Number(form.dataset.total))} total. Your prints ship in 3–5 days.`);
+    checkoutOrDemo(
+      {
+        kind: "print",
+        product: form.product.value,
+        size: form.size.value,
+        qty: Number(form.qty.value) || 1,
+      },
+      $("#print-status"),
+      `Order ready — ${money(Number(form.dataset.total))} total. Add a checkout API to take payment live.`
+    );
   });
   compute();
 }
@@ -456,4 +480,16 @@ function flash(node, message) {
   node.classList.add("show");
   clearTimeout(flashTimer);
   flashTimer = setTimeout(() => node.classList.remove("show"), 4200);
+}
+
+// Route a dynamic-amount purchase through the checkout API when configured,
+// otherwise show the demo message. Prices are computed server-side.
+function checkoutOrDemo(payload, statusNode, demoMessage) {
+  flash(statusNode, "Preparing secure checkout…");
+  startCheckout(payload)
+    .then((url) => {
+      if (url) window.location.assign(url);
+      else flash(statusNode, demoMessage);
+    })
+    .catch(() => flash(statusNode, "Checkout is temporarily unavailable. Please try again."));
 }

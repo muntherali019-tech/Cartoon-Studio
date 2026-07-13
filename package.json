@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "start": "python3 -m http.server 8000",
+    "serve:api": "node server/index.js",
     "test": "node tests/run.mjs"
   }
 }

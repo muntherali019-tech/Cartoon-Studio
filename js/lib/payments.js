@@ -23,6 +23,12 @@ export const PAYMENTS = {
   stripeLinks: {
     // plan_pro_monthly: "https://buy.stripe.com/xxxxxxxx",
   },
+
+  // Base URL of the checkout API (server/index.js) that creates Stripe
+  // Checkout Sessions for dynamic amounts (license quote, print order, cart).
+  // Leave blank to keep those flows as demo confirmations.
+  // e.g. "https://api.cartoonstudio.co.uk"
+  checkoutApiBase: "",
 };
 
 export function formspreeEndpoint(cfg = PAYMENTS) {
@@ -58,4 +64,24 @@ export async function submitContact(fields, cfg = PAYMENTS, fetchImpl) {
   });
   if (!res.ok) throw new Error(`formspree ${res.status}`);
   return { ok: true, delivered: true };
+}
+
+// Start a Checkout Session for a dynamic-amount purchase. Returns a Stripe
+// checkout URL when the API is configured, or null (demo fallback) when it is
+// not. `payload` is the user's selection, e.g. { kind: "print", product, size,
+// qty } — never a price; the server computes that. fetchImpl is injectable.
+export async function startCheckout(payload, cfg = PAYMENTS, fetchImpl) {
+  if (!cfg.checkoutApiBase) return null;
+
+  const doFetch = fetchImpl || (typeof fetch !== "undefined" ? fetch : null);
+  if (!doFetch) throw new Error("no fetch available");
+
+  const res = await doFetch(`${cfg.checkoutApiBase}/api/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`checkout ${res.status}`);
+  const { url } = await res.json();
+  return url;
 }

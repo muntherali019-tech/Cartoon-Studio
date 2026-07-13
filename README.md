@@ -85,9 +85,28 @@ fill the config in, so nothing breaks before you're ready.
    ```
    Plan buttons then redirect to Stripe-hosted checkout.
 
-> The license-quote, print-order, and multi-item cart totals are dynamic, so
-> they need a **server-side Stripe Checkout Session** rather than a static
-> Payment Link. Those flows are intentionally left as demo confirmations.
+### Dynamic checkout (license quote / print / cart)
+
+These totals are computed from user input, so they use a **server-side Stripe
+Checkout Session** (a static Payment Link can't do variable amounts). A small,
+dependency-free Node server is included at `server/`:
+
+```sh
+STRIPE_SECRET_KEY=sk_live_… PUBLIC_BASE_URL=https://cartoonstudio.co.uk \
+  npm run serve:api           # POST /api/checkout -> { url }
+```
+
+Then point the site at it in `js/lib/payments.js`:
+
+```js
+export const PAYMENTS = { checkoutApiBase: "https://api.cartoonstudio.co.uk", /* … */ };
+```
+
+The quote, print, and cart buttons then POST the user's **selection** (never a
+price) to the API, which **recomputes the amount server-side** from
+`js/lib/pricing.js` and returns a Stripe checkout URL to redirect to. Until
+`checkoutApiBase` is set, these flows stay as demo confirmations. The endpoint
+returns `503` if `STRIPE_SECRET_KEY` is unset, so nothing charges by accident.
 
 ### Real render model
 
@@ -97,5 +116,5 @@ hosted image model (OpenAI / Stability / Replicate) instead of the demo engine.
 
 ## Roadmap
 
-- Add a server-side Checkout Session endpoint for dynamic-amount purchases.
+- Verify Stripe webhooks server-side to fulfil orders after payment.
 - Persist the style-pack cart across sessions.
