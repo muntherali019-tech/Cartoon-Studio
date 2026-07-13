@@ -1,4 +1,5 @@
 // Cartoon Studio server — serves the web app and the AI API.
+import "./env.js"; // load a local .env (no-op when absent) BEFORE anything reads process.env
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

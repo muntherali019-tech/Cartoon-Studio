@@ -29,7 +29,9 @@ const api = async (method, route, { token, body } = {}) => {
 before(async () => {
   dataDir = mkdtempSync(path.join(tmpdir(), "cartoon-test-"));
   proc = spawn(process.execPath, [path.join(ROOT, "server", "index.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, AUTH_SECRET: "test-secret" },
+    // Force demo mode: an explicit empty ANTHROPIC_API_KEY wins over any local
+    // .env (the loader never overrides a set var), so tests never hit live AI.
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, AUTH_SECRET: "test-secret", ANTHROPIC_API_KEY: "" },
     stdio: "ignore",
   });
   for (let i = 0; i < 40; i++) {
