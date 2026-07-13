@@ -21,6 +21,8 @@ step**, so it deploys to Render in minutes.
 | 🦸 **Character designer** | A sentence → a memorable character with a full look sheet you can reuse. |
 | 🧩 **Sticker Pack Studio** *(Creator+)* | Any character → a cohesive set of expression stickers. |
 | 📷 **Photo → cartoon (Toonify)** | Drop a photo — vision AI reads it and redraws it as an on-model cartoon. |
+| 🖍 **Printable colouring pages** | Any idea → a clean black-and-white line-art page, ready to print or download. |
+| 🎲 **Surprise me** | One-tap example prompts so a blank canvas is never a dead end. |
 | 🎭 **Character Kit** *(Creator+)* | Lock your colours, style and character once; every render stays on-model. |
 | 💬 **Caption & meme writer** | Scroll-stopping captions and meme lines on tap. |
 | 👤 **Accounts + credits** | Email/password sign-in with server-enforced monthly credits (Free 8 · Creator 150 · Studio unlimited). |

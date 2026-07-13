@@ -217,6 +217,20 @@ export function demoToonify(style = "") {
 
 // ---- captions / memes ----------------------------------------------------
 
+// ---- printable colouring page --------------------------------------------
+
+export function demoColoring(topic) {
+  const s = subject(topic);
+  return {
+    title: `Colour in: ${titleCase(s)}`,
+    caption: `Colour in ${titleCase(s)}`,
+    line: true,
+    style: "clean black-and-white line art, bold even outlines, no shading",
+    palette: { primary: "#ffffff", secondary: "#ffffff", outline: "#141821", paper: "#ffffff" },
+    imagePrompt: `Printable colouring page of ${s}: clean bold black line art only, no shading or greyscale, large open areas to colour, plain white background, simple friendly shapes.`,
+  };
+}
+
 export function demoCaptions(topic, count = 6) {
   const s = subject(topic);
   const lines = [

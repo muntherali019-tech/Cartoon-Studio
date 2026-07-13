@@ -15,7 +15,7 @@ import { generateImage, imageProvider } from "./images.js";
 import { initStore, backend } from "./store.js";
 import { PROMPTS } from "./prompts.js";
 import {
-  demoIllustration, demoComic, demoCharacter, demoStickers, demoToonify, demoCaptions,
+  demoIllustration, demoComic, demoCharacter, demoStickers, demoToonify, demoCaptions, demoColoring,
 } from "./demo.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -40,7 +40,7 @@ app.use(express.static(PUBLIC_DIR));
 const NO_WATERMARK = process.env.CARTOON_NO_WATERMARK === "1";
 
 // Credit cost per paid action.
-const COST = { cartoon: 1, character: 1, toonify: 1, comicPerPanel: 1, stickerPerSticker: 1 };
+const COST = { cartoon: 1, character: 1, toonify: 1, coloring: 1, comicPerPanel: 1, stickerPerSticker: 1 };
 
 // ---------- meta ----------
 app.get("/api/health", (_req, res) => res.json({ ok: true, ...aiStatus() }));
@@ -136,6 +136,36 @@ app.post("/api/cartoon", wrap(async (req, res) => {
 
   // Try a real image model first (photoreal cartoon). Falls back to Toon Render.
   const img = await generateImage({ prompt: design.imagePrompt });
+  if (img && (img.url || img.b64)) {
+    return res.json({ type: "image", url: img.url, b64: img.b64, design, user: publicUser(req.user) });
+  }
+  res.json({ type: "design", design, user: publicUser(req.user) });
+}));
+
+// ---------- printable colouring page (costs 1 credit) ----------
+app.post("/api/coloring", wrap(async (req, res) => {
+  const { prompt = "" } = req.body || {};
+  if (!prompt.trim()) return res.status(400).json({ error: "prompt is required" });
+
+  const credit = await spendCredit(req.user, COST.coloring);
+  if (!credit.ok) return res.status(402).json({ error: "out_of_credits", user: publicUser(req.user) });
+
+  let design;
+  try {
+    design = await generateJSON({
+      system: PROMPTS.coloring,
+      content: `Idea: ${prompt}\nReturn JSON: { "title": string, "caption": string, "imagePrompt": string, "style": string, "line": true, "palette": {"primary": string, "secondary": string, "outline": string, "paper": string} }`,
+      maxTokens: 600,
+      demo: () => demoColoring(prompt),
+    });
+  } catch (e) {
+    await refundCredit(req.user, COST.coloring);
+    return res.status(502).json({ error: "generation_failed", user: publicUser(req.user) });
+  }
+  design.line = true; // always render as line art on the client
+
+  // A wired image model can draw real line art; otherwise the client renders it.
+  const img = await generateImage({ prompt: `${design.imagePrompt} Black and white line art only, no shading.` });
   if (img && (img.url || img.b64)) {
     return res.json({ type: "image", url: img.url, b64: img.b64, design, user: publicUser(req.user) });
   }

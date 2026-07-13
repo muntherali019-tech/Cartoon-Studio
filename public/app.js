@@ -35,8 +35,8 @@ async function init() {
   pill.style.color = CONFIG.enabled ? "var(--good)" : "var(--muted)";
   if (!CONFIG.enabled) $("#artHint").textContent = "Demo mode — add ANTHROPIC_API_KEY on the server for live AI, and an image key for photoreal cartoons.";
   renderAccount(); renderFeatures(); renderPlans(); renderPacks(); renderReferral();
-  wireTabs(); wireCartoon(); wireComic(); wireCharacter(); wireStickers(); wireToonify(); wireKit(); wireCaptions();
-  wireAuth(); wireReferral(); captureReferral();
+  wireTabs(); wireCartoon(); wireComic(); wireCharacter(); wireStickers(); wireToonify(); wireColoring(); wireKit(); wireCaptions();
+  wireAuth(); wireReferral(); wireDice(); captureReferral();
   if (USER) loadKit();
   drawHero();
   handleReturnFromCheckout();
@@ -213,15 +213,59 @@ function wireCartoon() {
 }
 
 // Render either a real image (from a wired image model) or the Toon Render spec.
+// Colouring pages (design.line) render as clean black-and-white line art.
 function renderImageResult(canvas, res, capEl) {
   if (res.type === "image" && (res.url || res.b64)) {
     const img = new Image(); img.crossOrigin = "anonymous";
     img.onload = () => { const ctx = canvas.getContext("2d"); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
     img.src = res.url || `data:image/png;base64,${res.b64}`;
+  } else if (res.design?.line) {
+    lineRender(canvas, res.design);
   } else {
     toonRender(canvas, res.design);
   }
-  if (capEl) capEl.textContent = res.design?.caption || "";
+  if (capEl) capEl.textContent = res.design?.caption || res.design?.title || "";
+}
+
+// LINE RENDER — a printable, outline-only colouring page (no fills, no shading).
+function lineRender(canvas, spec) {
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
+  const ink = "#141821";
+  // character in outline only
+  const rnd = mulberry(hashStr((spec?.imagePrompt || "") + (spec?.title || "")));
+  const cx = W * 0.5, cy = H * 0.48, r = W * 0.26;
+  ctx.save(); ctx.translate(cx, cy);
+  ctx.strokeStyle = ink; ctx.lineWidth = Math.max(5, W * 0.011); ctx.lineJoin = "round";
+  ctx.beginPath();
+  const pts = 16;
+  for (let i = 0; i <= pts; i++) { const a = (i / pts) * Math.PI * 2, wob = 1 + (rnd() - 0.5) * 0.18; const x = Math.cos(a) * r * wob, y = Math.sin(a) * r * wob * 1.05; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.closePath(); ctx.stroke();
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * r * 0.5, -r * 0.85); ctx.lineTo(s * r * 0.9, -r * 1.4); ctx.lineTo(s * r * 0.15, -r * 1.0); ctx.closePath(); ctx.stroke(); }
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * r * 0.34, -r * 0.12, r * 0.13, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(s * r * 0.34, -r * 0.12, r * 0.04, 0, 7); ctx.stroke(); }
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * r * 0.45, r * 0.2, r * 0.14, r * 0.09, 0, 0, 7); ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(0, r * 0.02, r * 0.34, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
+  // little stars to colour
+  for (let i = 0; i < 5; i++) { outlineStar(ctx, (rnd() - 0.5) * W * 1.4, (rnd() - 0.5) * H * 1.4, r * 0.12, ink); }
+  ctx.restore();
+  // title banner (outline)
+  const title = spec?.title || spec?.caption || "";
+  if (title) {
+    ctx.strokeStyle = ink; ctx.lineWidth = 3;
+    ctx.strokeRect(W * 0.08, H * 0.8, W * 0.84, W * 0.11);
+    ctx.fillStyle = ink; ctx.font = `800 ${Math.round(fitFont(ctx, title, W * 0.78, W * 0.06))}px sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(title, W * 0.5, H * 0.855); ctx.textBaseline = "alphabetic";
+  }
+  ctx.strokeStyle = ink; ctx.lineWidth = 8; ctx.strokeRect(4, 4, W - 8, H - 8);
+  ctx.fillStyle = "#9a8b7a"; ctx.font = `600 ${Math.round(W * 0.028)}px sans-serif`; ctx.textAlign = "right";
+  ctx.fillText("🎨 Cartoon Studio", W * 0.95, H * 0.965);
+}
+function outlineStar(ctx, x, y, r, ink) {
+  ctx.save(); ctx.translate(x, y); ctx.strokeStyle = ink; ctx.lineWidth = 3; ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.45 : r; const a = (i / 10) * Math.PI * 2; const px = Math.cos(a) * rr, py = Math.sin(a) * rr; i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py); }
+  ctx.closePath(); ctx.stroke(); ctx.restore();
 }
 
 // ---------- comic tool ----------
@@ -247,9 +291,15 @@ function wireComic() {
   });
 }
 
+let lastComicCanvases = [];
+let lastComic = null;
 function renderComic(c) {
+  lastComic = c; lastComicCanvases = [];
   const el = $("#comicOut");
-  el.innerHTML = `<div class="comic-head"><div class="comic-title">${esc(c.title || "Your comic")}</div><div class="muted">${esc(c.style || "")}</div></div>
+  el.innerHTML = `<div class="comic-head">
+      <div><div class="comic-title">${esc(c.title || "Your comic")}</div><div class="muted">${esc(c.style || "")}</div></div>
+      <button class="btn btn-ghost btn-sm" id="comicDownload">⬇ Download strip</button>
+    </div>
     <div class="comic-grid" id="comicGrid"></div>
     <div class="muted comic-share">${esc(c.shareCaption || "")}</div>`;
   const grid = $("#comicGrid");
@@ -258,14 +308,53 @@ function renderComic(c) {
     wrap.className = "comic-panel";
     const cv = document.createElement("canvas"); cv.width = 360; cv.height = 360;
     toonRender(cv, { imagePrompt: p.imagePrompt, palette: c.palette, brand: c.brand }, { label: `${p.panel}`, noMark: true });
-    // dialogue bubbles
     drawBubbles(cv, p.dialogue || [], c.palette);
+    lastComicCanvases.push(cv);
     wrap.appendChild(cv);
     const cap = document.createElement("div"); cap.className = "comic-cap";
     cap.innerHTML = `<b>${esc(p.caption || "")}</b> ${esc(p.action || "")}`;
     wrap.appendChild(cap);
     grid.appendChild(wrap);
   });
+  $("#comicDownload").addEventListener("click", downloadComicStrip);
+}
+
+// Stitch every panel into one shareable strip image with a title bar.
+function downloadComicStrip() {
+  if (!lastComicCanvases.length) return;
+  const n = lastComicCanvases.length;
+  const cols = n <= 3 ? n : Math.ceil(n / 2);
+  const rows = Math.ceil(n / cols);
+  const cell = 360, gap = 12, pad = 20, titleH = 70;
+  const pal = lastComic?.palette || PALETTES[0];
+  const out = document.createElement("canvas");
+  out.width = pad * 2 + cols * cell + (cols - 1) * gap;
+  out.height = pad * 2 + titleH + rows * cell + (rows - 1) * gap;
+  const ctx = out.getContext("2d");
+  ctx.fillStyle = pal.paper || "#FFF3E9"; ctx.fillRect(0, 0, out.width, out.height);
+  ctx.fillStyle = pal.outline || "#141821";
+  ctx.font = `800 34px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(lastComic?.title || "My comic", out.width / 2, pad + titleH / 2);
+  lastComicCanvases.forEach((cv, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = pad + col * (cell + gap), y = pad + titleH + row * (cell + gap);
+    ctx.drawImage(cv, x, y, cell, cell);
+    ctx.strokeStyle = pal.outline || "#141821"; ctx.lineWidth = 4;
+    ctx.strokeRect(x, y, cell, cell);
+  });
+  ctx.fillStyle = hexA(pal.outline || "#141821", 0.55); ctx.font = `700 20px sans-serif`; ctx.textAlign = "right";
+  ctx.fillText("🎨 Cartoon Studio", out.width - pad, out.height - 8);
+  downloadCanvas(out, "comic-strip.png");
+  toast("Comic strip downloaded 📖");
+}
+
+// Open a canvas in a print window.
+function printCanvas(canvas, title) {
+  const url = canvas.toDataURL("image/png");
+  const w = window.open("", "_blank");
+  if (!w) return toast("Allow pop-ups to print.");
+  w.document.write(`<html><head><title>${esc(title)}</title><style>@page{margin:12mm}body{margin:0}img{width:100%}</style></head><body><img src="${url}" onload="window.focus();window.print()"/></body></html>`);
+  w.document.close();
 }
 
 function drawBubbles(canvas, dialogue, pal) {
@@ -361,6 +450,46 @@ function wireToonify() {
     finally { busy($("#toonBtn"), false, "📷 Toonify"); }
   });
   $("#toonDownload").addEventListener("click", () => downloadCanvas($("#toonStage"), "toonified.png"));
+}
+
+// ---------- colouring page ----------
+function wireColoring() {
+  drawPlaceholder($("#colorStage"), "Describe a page →");
+  $("#colorBtn").addEventListener("click", async () => {
+    const prompt = $("#colorPrompt").value.trim();
+    if (!prompt) return toast("Describe your colouring page first.");
+    busy($("#colorBtn"), true, "Drawing…");
+    try {
+      const res = await api("/api/coloring", { prompt });
+      if (res.error === "out_of_credits") { syncUser(res.user); location.hash = "#pricing"; return toast("Out of credits — top up or upgrade."); }
+      if (res.error) return toast("Couldn't make the page — try again.");
+      syncUser(res.user);
+      renderImageResult($("#colorStage"), res, null);
+      toast("Colouring page ready 🖍");
+    } catch { toast("Colouring page failed — try again."); }
+    finally { busy($("#colorBtn"), false, "🖍 Make colouring page"); }
+  });
+  $("#colorDownload").addEventListener("click", () => downloadCanvas($("#colorStage"), "colouring-page.png"));
+  $("#colorPrint").addEventListener("click", () => printCanvas($("#colorStage"), "Colouring page"));
+}
+
+// ---------- "surprise me" example prompts ----------
+const EXAMPLES = [
+  "a grumpy cat in a tiny wizard hat, refusing to do magic",
+  "a brave little dumpling knight with a toothpick sword",
+  "an astronaut sloth planting a flag on a marshmallow moon",
+  "a business shark closing a deal on Monday morning",
+  "a shy robot learning to high-five a butterfly",
+  "a smug corgi who just won a staring contest",
+  "a tiny dragon accidentally toasting a s'more with one sneeze",
+  "a penguin barista serving iced coffee in a blizzard",
+  "a gamer octopus using all eight arms on one controller",
+  "an avocado superhero saving breakfast from the villain Toast",
+];
+function wireDice() {
+  const fill = (id) => { $("#" + id).value = EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)]; };
+  $("#artDice")?.addEventListener("click", () => fill("artPrompt"));
+  $("#colorDice")?.addEventListener("click", () => fill("colorPrompt"));
 }
 
 // ---------- character kit ----------
