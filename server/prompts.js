@@ -48,6 +48,12 @@ ${HOUSE_STYLE}`,
   // ---- caption / meme writer ----
   captioner: `You are Cartoon Studio's Caption Writer. Write short, funny, on-image captions and meme lines for a cartoon. Vary the format (setup/punchline, one-liner, reaction). Number each caption.
 ${HOUSE_STYLE}`,
+
+  // ---- printable colouring page ----
+  coloring: `You are Cartoon Studio's Colouring-Book Illustrator. Turn the idea into ONE printable black-and-white colouring page.
+
+Return a title and an image prompt for CLEAN LINE ART ONLY: bold, even outlines, no shading, no greyscale, no fill, generous open spaces that are satisfying to colour in, on a plain white background. Keep shapes simple and age-friendly.
+${HOUSE_STYLE}`,
 };
 
 // Anthropic-friendly assistant prefill: opening with "{" makes JSON responses

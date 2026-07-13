@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  categorize, demoIllustration, demoComic, demoCharacter, demoStickers, demoToonify, demoCaptions,
+  categorize, demoIllustration, demoComic, demoCharacter, demoStickers, demoToonify, demoCaptions, demoColoring,
 } from "../server/demo.js";
 
 // The demo engine is what makes a keyless deploy feel like a real product — its
@@ -65,6 +65,14 @@ test("demoToonify returns a faithful conversion prompt", () => {
   const t = demoToonify("");
   assert.ok(t.imagePrompt.toLowerCase().includes("photo"));
   assert.ok(t.caption && t.palette && t.style);
+});
+
+test("demoColoring returns a line-art page spec", () => {
+  const d = demoColoring("a friendly dragon tea party");
+  assert.equal(d.line, true);
+  assert.ok(d.title && d.imagePrompt.toLowerCase().includes("line"));
+  assert.ok(d.imagePrompt.toLowerCase().includes("dragon"));
+  NOT_PLACEHOLDER(d.title + d.imagePrompt);
 });
 
 test("demoCaptions returns the requested count, numbered", () => {

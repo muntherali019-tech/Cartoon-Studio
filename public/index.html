@@ -54,6 +54,7 @@
             <button class="tab" data-tab="character">🦸 Character</button>
             <button class="tab" data-tab="stickers">🧩 Stickers <span class="pro-dot">PRO</span></button>
             <button class="tab" data-tab="toonify">📷 Toonify</button>
+            <button class="tab" data-tab="coloring">🖍 Colouring</button>
             <button class="tab" data-tab="kit">🎭 Kit <span class="pro-dot">PRO</span></button>
             <button class="tab" data-tab="captions">💬 Captions</button>
           </div>
@@ -63,7 +64,7 @@
         <div class="panel active" data-panel="cartoon">
           <div class="panel-grid">
             <div class="controls card">
-              <label class="field"><span>Describe your cartoon</span>
+              <label class="field"><span>Describe your cartoon <button type="button" class="dice" id="artDice" title="Surprise me">🎲 Surprise me</button></span>
                 <textarea id="artPrompt" rows="3" placeholder="e.g. a grumpy cat in a tiny wizard hat, refusing to do magic"></textarea></label>
               <label class="field"><span>Art style</span>
                 <select id="artStyle">
@@ -161,6 +162,26 @@
               <canvas id="toonStage" width="600" height="600"></canvas>
               <button class="btn btn-ghost" id="toonDownload">⬇ Download PNG</button>
               <p class="cap" id="toonCaption"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLOURING PAGE -->
+        <div class="panel" data-panel="coloring">
+          <div class="panel-grid">
+            <div class="controls card">
+              <p class="muted">Make a printable black-and-white colouring page from any idea — perfect for kids, classrooms and craft nights.</p>
+              <label class="field"><span>What should it be? <button type="button" class="dice" id="colorDice" title="Surprise me">🎲 Surprise me</button></span>
+                <textarea id="colorPrompt" rows="3" placeholder="e.g. a friendly dragon having a tea party with woodland animals"></textarea></label>
+              <button class="btn btn-primary btn-block" id="colorBtn">🖍 Make colouring page</button>
+              <p class="hint" id="colorHint"></p>
+            </div>
+            <div class="preview card center">
+              <canvas id="colorStage" width="600" height="600"></canvas>
+              <div class="player-bar">
+                <button class="btn btn-ghost" id="colorPrint">🖨 Print</button>
+                <button class="btn btn-ghost" id="colorDownload">⬇ Download PNG</button>
+              </div>
             </div>
           </div>
         </div>

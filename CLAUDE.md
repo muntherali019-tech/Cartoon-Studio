@@ -97,6 +97,7 @@ image model is wired). The Anthropic API key never reaches the browser.
 | Character designer | `POST /api/character` | 1 credit | Reusable character sheet |
 | Sticker Pack Studio | `POST /api/stickers` | 1/sticker · **Creator+** | Matching expression set |
 | Toonify | `POST /api/toonify` | 1 credit | Photo → cartoon (vision) |
+| Colouring Page | `POST /api/coloring` | 1 credit | Printable black-and-white line-art page (`design.line`) |
 | Character Kit | `GET/POST /api/characterkit` | — · **Creator+** | Save colours/style/traits applied to all renders |
 | Captions | `POST /api/captions` | free | Meme/caption lines |
 | Billing | `POST /api/billing/checkout` · `/credits` · `/webhook` | — | Subscriptions + one-time credit packs |

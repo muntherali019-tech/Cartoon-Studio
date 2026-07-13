@@ -147,6 +147,15 @@ test("toonify requires an image payload", async () => {
   assert.equal((await api("POST", "/api/toonify", { body: {} })).status, 400);
 });
 
+test("colouring page requires a prompt and returns a line-art spec", async () => {
+  assert.equal((await api("POST", "/api/coloring", { body: { prompt: "  " } })).status, 400);
+  const r = await api("POST", "/api/coloring", { body: { prompt: "a friendly dragon tea party" } });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.type, "design");
+  assert.equal(r.body.design.line, true);
+  assert.ok(r.body.design.imagePrompt && r.body.design.title);
+});
+
 test("billing checkout is gated on auth and Stripe configuration", async () => {
   assert.equal((await api("POST", "/api/billing/checkout", { body: { plan: "creator" } })).status, 401);
   const { body: { token } } = await api("POST", "/api/auth/login", { body: { email: "artist@example.com", password: "secret123" } });
