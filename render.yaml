@@ -1,0 +1,29 @@
+# Render Blueprint — one-service deploy of Cartoon Studio.
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: cartoon-studio
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: AUTH_SECRET
+        generateValue: true
+      # Add your keys in the Render dashboard (kept out of source):
+      #   ANTHROPIC_API_KEY   — live AI (else demo mode)
+      #   OPENAI_API_KEY + IMAGE_PROVIDER=openai — photoreal cartoon rendering
+      #   STRIPE_SECRET_KEY, STRIPE_PRICE_*, STRIPE_WEBHOOK_SECRET — billing
+      #   DATABASE_URL        — durable Postgres (else JSON file)
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
