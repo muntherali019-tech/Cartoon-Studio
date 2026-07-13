@@ -56,13 +56,46 @@ npm test           # runs unit tests, then Playwright e2e against a temp server
 The runner resolves Playwright from a local or global install and skips the
 e2e phase gracefully if a browser isn't available; unit tests always run.
 
-## Going to production
+## Going live
+
+All of the integrations below work from this static site — no server required
+for the first two. Everything falls back to a friendly demo message until you
+fill the config in, so nothing breaks before you're ready.
+
+### Contact form (Formspree)
+
+1. Create a form at [formspree.io](https://formspree.io) and copy its id (the
+   part after `/f/`).
+2. Set it in `js/lib/payments.js`:
+   ```js
+   export const PAYMENTS = { formspreeId: "yourFormId", /* … */ };
+   ```
+   Submissions now POST straight to Formspree from the browser.
+
+### Plan checkout (Stripe Payment Links)
+
+1. In the Stripe dashboard, create a **Payment Link** for each plan/cycle.
+2. Paste the `buy.stripe.com` URLs into `stripeLinks`, keyed by
+   `plan_<planId>_<cycle>`:
+   ```js
+   stripeLinks: {
+     plan_pro_monthly: "https://buy.stripe.com/…",
+     plan_pro_annual:  "https://buy.stripe.com/…",
+   }
+   ```
+   Plan buttons then redirect to Stripe-hosted checkout.
+
+> The license-quote, print-order, and multi-item cart totals are dynamic, so
+> they need a **server-side Stripe Checkout Session** rather than a static
+> Payment Link. Those flows are intentionally left as demo confirmations.
+
+### Real render model
 
 Set credentials in `js/lib/backends.js` (`RENDER_CONFIG`) — ideally via a
 server-side proxy so keys never ship to the client — to route renders through a
-hosted image model instead of the demo engine.
+hosted image model (OpenAI / Stability / Replicate) instead of the demo engine.
 
 ## Roadmap
 
-- Wire the contact form and checkout CTAs to real backend endpoints.
-- Persist the style-pack cart and connect a payment provider.
+- Add a server-side Checkout Session endpoint for dynamic-amount purchases.
+- Persist the style-pack cart across sessions.

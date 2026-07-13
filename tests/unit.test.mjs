@@ -8,6 +8,9 @@ import { validateForm, validators } from "../js/lib/validate.js";
 import {
   planPrice, PLANS, quoteCommercial, printPrice, cartTotal, STYLE_PACKS,
 } from "../js/lib/pricing.js";
+import {
+  formspreeEndpoint, planLinkKey, packLinkKey, paymentLink, submitContact,
+} from "../js/lib/payments.js";
 
 export const tests = {
   "hashString is deterministic and unsigned"() {
@@ -124,5 +127,51 @@ export const tests = {
     assert.equal(cartTotal([{ price: 10, qty: 2 }, { price: 8, qty: 1 }]), 28);
     assert.equal(cartTotal([]), 0);
     assert.ok(STYLE_PACKS.length >= 4);
+  },
+
+  "payment config helpers build stable keys and resolve links"() {
+    assert.equal(planLinkKey("pro", "monthly"), "plan_pro_monthly");
+    assert.equal(packLinkKey("anime"), "pack_anime");
+    // Unconfigured -> null (demo fallback path).
+    assert.equal(formspreeEndpoint({ formspreeId: "" }), null);
+    assert.equal(paymentLink("plan_pro_monthly", { stripeLinks: {} }), null);
+    // Configured -> real values.
+    assert.equal(formspreeEndpoint({ formspreeId: "abc123" }), "https://formspree.io/f/abc123");
+    const cfg = { stripeLinks: { plan_pro_monthly: "https://buy.stripe.com/x" } };
+    assert.equal(paymentLink("plan_pro_monthly", cfg), "https://buy.stripe.com/x");
+  },
+
+  async "submitContact skips network when unconfigured (demo path)"() {
+    let called = false;
+    const fakeFetch = () => { called = true; return Promise.resolve({ ok: true }); };
+    const res = await submitContact({ name: "A" }, { formspreeId: "" }, fakeFetch);
+    assert.equal(res.delivered, false);
+    assert.equal(called, false, "must not hit the network with no endpoint");
+  },
+
+  async "submitContact POSTs JSON to the Formspree endpoint when configured"() {
+    let seen;
+    const fakeFetch = (url, opts) => {
+      seen = { url, opts };
+      return Promise.resolve({ ok: true });
+    };
+    const res = await submitContact(
+      { name: "Ada", email: "a@b.co", message: "hello there" },
+      { formspreeId: "form99" },
+      fakeFetch
+    );
+    assert.equal(res.delivered, true);
+    assert.equal(seen.url, "https://formspree.io/f/form99");
+    assert.equal(seen.opts.method, "POST");
+    assert.match(seen.opts.headers["Content-Type"], /application\/json/);
+    assert.deepEqual(JSON.parse(seen.opts.body), { name: "Ada", email: "a@b.co", message: "hello there" });
+  },
+
+  async "submitContact throws on a failed HTTP response"() {
+    const fakeFetch = () => Promise.resolve({ ok: false, status: 500 });
+    await assert.rejects(
+      () => submitContact({ name: "A" }, { formspreeId: "form99" }, fakeFetch),
+      /formspree 500/
+    );
   },
 };

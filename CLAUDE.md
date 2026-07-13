@@ -27,6 +27,8 @@ codebase.
   - `backends.js` — hosted-model adapters (OpenAI/Stability/Replicate) with a
     fallback to the local engine when no API key is configured.
   - `pricing.js` — plans, license quoting, print + pack pricing.
+  - `payments.js` — Formspree (contact) + Stripe Payment Link config and
+    helpers; all keyless and safe for a static site, with demo fallbacks.
   - `validate.js` — form validators.
 - `tests/` — `unit.test.mjs` (pure logic), `e2e.test.mjs` (Playwright),
   `run.mjs` (runner: unit tests + static server + e2e).
@@ -57,8 +59,10 @@ the e2e phase gracefully if no browser is available; unit tests always run.
 ## Current State
 
 - Working `package.json` with `start` and `test` scripts.
-- Remaining `TODO`s: POST the contact form and checkout CTAs to real backends;
-  connect a payment provider for the store cart.
+- Contact form delivers via Formspree and plan checkout redirects to Stripe
+  Payment Links once configured in `payments.js` (both keyless / static-safe).
+- Remaining: a server-side Stripe Checkout Session for dynamic-amount flows
+  (license quote, print order, multi-item cart).
 - The default branch is `main`.
 
 ## Conventions

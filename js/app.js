@@ -10,6 +10,7 @@ import {
   STYLE_PACKS, cartTotal,
 } from "./lib/pricing.js";
 import { GALLERY, TESTIMONIALS, STATS, FEATURES } from "./data.js";
+import { submitContact, paymentLink, planLinkKey } from "./lib/payments.js";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -254,8 +255,17 @@ function initPlans() {
     $$("[data-plan]", mount).forEach((b) =>
       b.addEventListener("click", () => {
         const plan = PLANS.find((p) => p.id === b.dataset.plan);
+        const priceLabel = `${money(planPrice(plan, cycle))}${cycle === "annual" ? "/yr" : "/mo"}`;
+        const link = paymentLink(planLinkKey(plan.id, cycle));
+        if (link) {
+          // Configured: send the buyer to Stripe-hosted checkout.
+          flash($("#plan-status"), `Redirecting to secure checkout for ${plan.name} (${priceLabel})…`);
+          window.location.assign(link);
+          return;
+        }
+        // Demo fallback until a Stripe Payment Link is configured.
         flash($("#plan-status"),
-          `Great choice — ${plan.name} at ${money(planPrice(plan, cycle))}${cycle === "annual" ? "/yr" : "/mo"}. Redirecting to secure checkout…`);
+          `Great choice — ${plan.name} at ${priceLabel}. Add a Stripe Payment Link to enable live checkout.`);
       })
     );
   };
@@ -419,11 +429,20 @@ function initContactForm() {
     const btn = form.querySelector('button[type="submit"]');
     if (btn) btn.disabled = true;
     setStatus("Sending…", null);
-    // TODO: POST the enquiry to a real backend endpoint once one exists.
-    Promise.resolve()
+
+    // Delivers via Formspree when configured (js/lib/payments.js); otherwise
+    // resolves locally so the demo still confirms.
+    submitContact({
+      name: form.elements.name.value.trim(),
+      email: form.elements.email.value.trim(),
+      message: form.elements.message.value.trim(),
+    })
       .then(() => {
         form.reset();
         setStatus("Thanks! We'll be in touch soon.", "success");
+      })
+      .catch(() => {
+        setStatus("Something went wrong sending your enquiry. Please try again.", "error");
       })
       .finally(() => btn && (btn.disabled = false));
   });
