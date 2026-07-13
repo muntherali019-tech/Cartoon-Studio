@@ -162,6 +162,37 @@ test("billing checkout is gated on auth and Stripe configuration", async () => {
   assert.equal((await api("POST", "/api/billing/checkout", { token, body: { plan: "creator" } })).status, 400);
 });
 
+test("gallery saves, lists and deletes creations for a signed-in user", async () => {
+  // Anonymous access is rejected.
+  assert.equal((await api("GET", "/api/gallery")).status, 401);
+  assert.equal((await api("POST", "/api/gallery", { body: { type: "cartoon", design: {} } })).status, 401);
+
+  const { body: { token } } = await api("POST", "/api/auth/login", { body: { email: "artist@example.com", password: "secret123" } });
+
+  // Starts empty.
+  assert.deepEqual((await api("GET", "/api/gallery", { token })).body.items, []);
+
+  // A save without a design is rejected; a valid save round-trips.
+  assert.equal((await api("POST", "/api/gallery", { token, body: { type: "cartoon" } })).status, 400);
+  const saved = await api("POST", "/api/gallery", {
+    token,
+    body: { type: "cartoon", caption: "a happy robot", design: { caption: "a happy robot", imagePrompt: "robot", palette: { primary: "#fff", outline: "#000" } } },
+  });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.items.length, 1);
+  const id = saved.body.items[0].id;
+  assert.equal(saved.body.items[0].type, "cartoon");
+  assert.equal(saved.body.items[0].caption, "a happy robot");
+
+  // An unknown creation type is rejected.
+  assert.equal((await api("POST", "/api/gallery", { token, body: { type: "bogus", design: { caption: "x" } } })).status, 400);
+
+  // Delete removes it.
+  const del = await api("DELETE", `/api/gallery/${id}`, { token });
+  assert.equal(del.status, 200);
+  assert.deepEqual(del.body.items, []);
+});
+
 test("referrals grant bonus credits to both parties", async () => {
   const referrer = await api("POST", "/api/auth/signup", { body: { email: "referrer@example.com", password: "secret123" } });
   const code = referrer.body.user.referralCode;

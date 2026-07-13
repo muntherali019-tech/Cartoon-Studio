@@ -208,6 +208,48 @@ export async function setPlan(user, plan) {
   await saveUser(user);
 }
 
+// ---- gallery ("My Creations") ----
+// A capped, newest-first list of saved creations stored on the user record.
+export const MAX_GALLERY = 30;
+const GALLERY_TYPES = new Set(["cartoon", "coloring", "toonify", "character", "comic", "stickers"]);
+
+export async function addToGallery(user, item = {}) {
+  if (!user) throw new Error("Sign in first");
+  const type = String(item.type || "cartoon");
+  if (!GALLERY_TYPES.has(type)) throw new Error("Unknown creation type");
+  const design = item.design && typeof item.design === "object" ? item.design : null;
+  if (!design) throw new Error("Nothing to save");
+  const entry = {
+    id: crypto.randomUUID(),
+    type,
+    caption: String(item.caption || design.caption || design.title || "").slice(0, 120),
+    // Keep only the small render spec (never large base64 image blobs).
+    design: {
+      caption: String(design.caption || "").slice(0, 120),
+      title: String(design.title || "").slice(0, 120),
+      imagePrompt: String(design.imagePrompt || "").slice(0, 600),
+      style: String(design.style || "").slice(0, 120),
+      line: Boolean(design.line),
+      palette: design.palette && typeof design.palette === "object" ? design.palette : null,
+    },
+    savedAt: Date.now(),
+  };
+  user.gallery = [entry, ...(Array.isArray(user.gallery) ? user.gallery : [])].slice(0, MAX_GALLERY);
+  await saveUser(user);
+  return user.gallery;
+}
+
+export async function removeFromGallery(user, id) {
+  if (!user) throw new Error("Sign in first");
+  user.gallery = (Array.isArray(user.gallery) ? user.gallery : []).filter((g) => g.id !== id);
+  await saveUser(user);
+  return user.gallery;
+}
+
+export function getGallery(user) {
+  return Array.isArray(user?.gallery) ? user.gallery : [];
+}
+
 // ---- character kit (premium) ----
 const HEX = /^#?[0-9a-fA-F]{3,8}$/;
 export async function setCharacterKit(user, kit = {}) {

@@ -24,6 +24,7 @@ step**, so it deploys to Render in minutes.
 | 🖍 **Printable colouring pages** | Any idea → a clean black-and-white line-art page, ready to print or download. |
 | 🎲 **Surprise me** | One-tap example prompts so a blank canvas is never a dead end. |
 | 🎭 **Character Kit** *(Creator+)* | Lock your colours, style and character once; every render stays on-model. |
+| 🖼 **My Creations gallery** | Save any creation to your account and revisit, re-download or delete it any time. |
 | 💬 **Caption & meme writer** | Scroll-stopping captions and meme lines on tap. |
 | 👤 **Accounts + credits** | Email/password sign-in with server-enforced monthly credits (Free 8 · Creator 150 · Studio unlimited). |
 | 💸 **Live Stripe billing** | Real Checkout + webhook for subscriptions **and** one-time credit packs. |

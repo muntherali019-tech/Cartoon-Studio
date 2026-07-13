@@ -36,7 +36,7 @@ async function init() {
   if (!CONFIG.enabled) $("#artHint").textContent = "Demo mode — add ANTHROPIC_API_KEY on the server for live AI, and an image key for photoreal cartoons.";
   renderAccount(); renderFeatures(); renderPlans(); renderPacks(); renderReferral();
   wireTabs(); wireCartoon(); wireComic(); wireCharacter(); wireStickers(); wireToonify(); wireColoring(); wireKit(); wireCaptions();
-  wireAuth(); wireReferral(); wireDice(); captureReferral();
+  wireAuth(); wireReferral(); wireDice(); wireGallery(); captureReferral();
   if (USER) loadKit();
   drawHero();
   handleReturnFromCheckout();
@@ -204,6 +204,7 @@ function wireCartoon() {
       if (res.error === "out_of_credits") { syncUser(res.user); location.hash = "#pricing"; return toast("Out of credits — top up or upgrade."); }
       if (res.error) return toast("Couldn't draw that — try again.");
       syncUser(res.user);
+      lastResults.cartoon = res.design;
       renderImageResult($("#artStage"), res, $("#artCaption"));
       toast("Cartoon drawn 🎨");
     } catch { toast("Draw failed — try again."); }
@@ -444,6 +445,7 @@ function wireToonify() {
       if (res.error === "out_of_credits") { syncUser(res.user); location.hash = "#pricing"; return toast("Out of credits — top up or upgrade."); }
       if (res.error) return toast("Toonify failed — try a clearer photo.");
       syncUser(res.user);
+      lastResults.toonify = res.design;
       renderImageResult($("#toonStage"), res, $("#toonCaption"));
       toast("Toonified 📷✨");
     } catch { toast("Toonify failed — try again."); }
@@ -464,6 +466,7 @@ function wireColoring() {
       if (res.error === "out_of_credits") { syncUser(res.user); location.hash = "#pricing"; return toast("Out of credits — top up or upgrade."); }
       if (res.error) return toast("Couldn't make the page — try again.");
       syncUser(res.user);
+      lastResults.coloring = res.design;
       renderImageResult($("#colorStage"), res, null);
       toast("Colouring page ready 🖍");
     } catch { toast("Colouring page failed — try again."); }
@@ -490,6 +493,68 @@ function wireDice() {
   const fill = (id) => { $("#" + id).value = EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)]; };
   $("#artDice")?.addEventListener("click", () => fill("artPrompt"));
   $("#colorDice")?.addEventListener("click", () => fill("colorPrompt"));
+}
+
+// ---------- gallery ("My Creations") ----------
+const lastResults = {}; // { cartoon, coloring, toonify } → last design spec
+
+function wireGallery() {
+  $("#artSave")?.addEventListener("click", () => saveToGallery("cartoon", lastResults.cartoon));
+  $("#colorSave")?.addEventListener("click", () => saveToGallery("coloring", lastResults.coloring));
+  $("#toonSave")?.addEventListener("click", () => saveToGallery("toonify", lastResults.toonify));
+  // Load the gallery whenever its tab is opened.
+  document.querySelector('.tab[data-tab="gallery"]')?.addEventListener("click", loadGallery);
+}
+
+async function saveToGallery(type, design) {
+  if (!USER) return openAuth("signup");
+  if (!design) return toast("Make something first, then save it.");
+  try {
+    const res = await api("/api/gallery", { type, design, caption: design.caption || design.title || "" });
+    if (res.error) return toast(res.error);
+    renderGallery(res.items);
+    toast("Saved to your gallery 🖼");
+  } catch { toast("Couldn't save — try again."); }
+}
+
+async function loadGallery() {
+  const grid = $("#galleryGrid"), empty = $("#galleryEmpty");
+  if (!USER) { grid.innerHTML = ""; empty.hidden = false; empty.innerHTML = "Sign in and hit <b>💾 Save</b> on any creation to start your gallery."; return; }
+  try {
+    const res = await fetch("/api/gallery", { headers: { authorization: `Bearer ${TOKEN}` } }).then((r) => r.json());
+    renderGallery(res.items || []);
+  } catch { toast("Couldn't load your gallery."); }
+}
+
+function renderGallery(items) {
+  const grid = $("#galleryGrid"), empty = $("#galleryEmpty");
+  if (!items || !items.length) { grid.innerHTML = ""; empty.hidden = false; empty.textContent = "Nothing saved yet — hit 💾 Save on any creation."; return; }
+  empty.hidden = true;
+  grid.innerHTML = "";
+  items.forEach((it) => {
+    const card = document.createElement("div"); card.className = "gallery-item";
+    const cv = document.createElement("canvas"); cv.width = 300; cv.height = 300;
+    if (it.design?.line) lineRender(cv, it.design); else toonRender(cv, it.design || {}, { noMark: true });
+    card.appendChild(cv);
+    const meta = document.createElement("div"); meta.className = "gallery-meta";
+    meta.innerHTML = `<span class="gitype">${esc(it.type)}</span><span class="muted">${esc(it.caption || "")}</span>`;
+    card.appendChild(meta);
+    const bar = document.createElement("div"); bar.className = "gallery-bar";
+    const dl = document.createElement("button"); dl.className = "btn btn-ghost btn-sm"; dl.textContent = "⬇";
+    dl.title = "Download"; dl.addEventListener("click", () => downloadCanvas(cv, `${it.type}-${it.id.slice(0, 6)}.png`));
+    const del = document.createElement("button"); del.className = "btn btn-ghost btn-sm"; del.textContent = "🗑";
+    del.title = "Delete"; del.addEventListener("click", () => deleteFromGallery(it.id));
+    bar.appendChild(dl); bar.appendChild(del); card.appendChild(bar);
+    grid.appendChild(card);
+  });
+}
+
+async function deleteFromGallery(id) {
+  try {
+    const res = await fetch(`/api/gallery/${id}`, { method: "DELETE", headers: { authorization: `Bearer ${TOKEN}` } }).then((r) => r.json());
+    renderGallery(res.items || []);
+    toast("Removed from gallery.");
+  } catch { toast("Couldn't remove — try again."); }
 }
 
 // ---------- character kit ----------

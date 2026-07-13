@@ -56,6 +56,7 @@
             <button class="tab" data-tab="toonify">📷 Toonify</button>
             <button class="tab" data-tab="coloring">🖍 Colouring</button>
             <button class="tab" data-tab="kit">🎭 Kit <span class="pro-dot">PRO</span></button>
+            <button class="tab" data-tab="gallery">🖼 Gallery</button>
             <button class="tab" data-tab="captions">💬 Captions</button>
           </div>
         </div>
@@ -82,6 +83,7 @@
               <canvas id="artStage" width="600" height="600"></canvas>
               <div class="player-bar">
                 <button class="btn btn-ghost" id="artDownload">⬇ Download PNG</button>
+                <button class="btn btn-ghost" id="artSave">💾 Save</button>
               </div>
               <p class="cap" id="artCaption"></p>
             </div>
@@ -160,7 +162,10 @@
             </div>
             <div class="preview card center">
               <canvas id="toonStage" width="600" height="600"></canvas>
-              <button class="btn btn-ghost" id="toonDownload">⬇ Download PNG</button>
+              <div class="player-bar">
+                <button class="btn btn-ghost" id="toonDownload">⬇ Download PNG</button>
+                <button class="btn btn-ghost" id="toonSave">💾 Save</button>
+              </div>
               <p class="cap" id="toonCaption"></p>
             </div>
           </div>
@@ -181,6 +186,7 @@
               <div class="player-bar">
                 <button class="btn btn-ghost" id="colorPrint">🖨 Print</button>
                 <button class="btn btn-ghost" id="colorDownload">⬇ Download PNG</button>
+                <button class="btn btn-ghost" id="colorSave">💾 Save</button>
               </div>
             </div>
           </div>
@@ -224,6 +230,18 @@
               <button class="btn btn-primary" id="capBtn">💬 Write captions</button>
             </div>
             <pre class="output" id="capOut"></pre>
+          </div>
+        </div>
+
+        <!-- GALLERY -->
+        <div class="panel" data-panel="gallery">
+          <div class="card">
+            <div class="panel-title"><div>
+              <h3>My Creations</h3>
+              <p class="muted">Everything you save lives here, synced to your account. Re-download any time.</p>
+            </div></div>
+            <div id="galleryEmpty" class="gallery-empty muted">Sign in and hit <b>💾 Save</b> on any creation to start your gallery.</div>
+            <div id="galleryGrid" class="gallery-grid"></div>
           </div>
         </div>
       </section>
