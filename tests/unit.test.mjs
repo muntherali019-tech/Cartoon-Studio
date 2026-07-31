@@ -1,0 +1,305 @@
+// Pure-logic unit tests. No browser, no framework — just Node's assert.
+import assert from "node:assert/strict";
+
+import { hashString, createRng } from "../js/lib/rng.js";
+import { buildMasterPrompt, getStyle, STYLES } from "../js/lib/prompts.js";
+import { renderCartoon } from "../js/lib/renderer.js";
+import { validateForm, validators } from "../js/lib/validate.js";
+import {
+  planPrice, PLANS, quoteCommercial, printPrice, cartTotal, STYLE_PACKS,
+} from "../js/lib/pricing.js";
+import {
+  formspreeEndpoint, planLinkKey, packLinkKey, paymentLink, submitContact,
+} from "../js/lib/payments.js";
+import {
+  buildLineItems, stripeForm, buildSessionParams, createCheckoutSession,
+} from "../server/checkout.js";
+import {
+  parseSignatureHeader, computeSignature, verifyStripeSignature, handleEvent,
+} from "../server/webhook.js";
+
+export const tests = {
+  "hashString is deterministic and unsigned"() {
+    assert.equal(hashString("cartoon"), hashString("cartoon"));
+    assert.notEqual(hashString("cartoon"), hashString("studio"));
+    assert.ok(hashString("x") >= 0);
+  },
+
+  "seeded rng is reproducible"() {
+    const a = createRng(42);
+    const b = createRng(42);
+    assert.equal(a.next(), b.next());
+    const r = createRng(1);
+    assert.ok(r.int(1, 6) >= 1 && r.int(1, 6) <= 6);
+    assert.ok(["a", "b", "c"].includes(createRng(9).pick(["a", "b", "c"])));
+  },
+
+  "buildMasterPrompt includes subject, style phrasing and negatives"() {
+    const mp = buildMasterPrompt("pop", "a robot chef");
+    assert.match(mp.positive, /a robot chef/);
+    assert.match(mp.positive, /pop-art/i);
+    assert.match(mp.positive, /masterpiece/);
+    assert.ok(mp.negative.length > 0);
+    assert.equal(mp.styleName, "Pop Art");
+  },
+
+  "buildMasterPrompt falls back for empty subject"() {
+    const mp = buildMasterPrompt("water", "   ");
+    assert.match(mp.positive, /friendly character/);
+  },
+
+  "getStyle returns a valid style or default"() {
+    assert.equal(getStyle("noir").id, "noir");
+    assert.equal(getStyle("nope").id, STYLES[0].id);
+  },
+
+  "renderCartoon is deterministic per prompt+style"() {
+    const a = renderCartoon({ prompt: "a fox", style: "chibi" });
+    const b = renderCartoon({ prompt: "a fox", style: "chibi" });
+    assert.equal(a, b);
+    assert.match(a, /^<svg/);
+    assert.match(a, /viewBox="0 0 512 512"/);
+  },
+
+  "renderCartoon varies with different input"() {
+    const a = renderCartoon({ prompt: "a fox", style: "chibi" });
+    const b = renderCartoon({ prompt: "a bear", style: "chibi" });
+    const c = renderCartoon({ prompt: "a fox", style: "noir" });
+    assert.notEqual(a, b);
+    assert.notEqual(a, c);
+  },
+
+  "renderCartoon escapes prompt text in the aria label"() {
+    const svg = renderCartoon({ prompt: '<script>"x"', style: "pop" });
+    assert.doesNotMatch(svg, /<script>/);
+    assert.match(svg, /&lt;script&gt;/);
+  },
+
+  "every style renders valid, balanced svg"() {
+    for (const s of STYLES) {
+      const svg = renderCartoon({ prompt: "test subject", style: s.id });
+      assert.match(svg, /<\/svg>$/);
+      const open = (svg.match(/<g[ >]/g) || []).length;
+      const close = (svg.match(/<\/g>/g) || []).length;
+      assert.equal(open, close, `unbalanced <g> in style ${s.id}`);
+    }
+  },
+
+  "validators catch empty and malformed input"() {
+    assert.ok(validators.name(""));
+    assert.equal(validators.name("Ada"), "");
+    assert.ok(validators.email("nope"));
+    assert.equal(validators.email("a@b.co"), "");
+    assert.ok(validators.message("hi"));
+    assert.equal(validators.message("a proper enquiry here"), "");
+  },
+
+  "validateForm aggregates errors"() {
+    const bad = validateForm({ name: "", email: "x", message: "" });
+    assert.equal(bad.valid, false);
+    assert.equal(Object.keys(bad.errors).length, 3);
+    const good = validateForm({ name: "Ada", email: "a@b.co", message: "please make me a cartoon" });
+    assert.equal(good.valid, true);
+  },
+
+  "annual plan price gives a discount vs monthly x12"() {
+    const pro = PLANS.find((p) => p.id === "pro");
+    const monthlyYear = pro.monthly * 12;
+    assert.ok(planPrice(pro, "annual") < monthlyYear);
+    assert.equal(planPrice(pro, "monthly"), pro.monthly);
+  },
+
+  "commercial quote scales with scope, reach, assets and modifiers"() {
+    const base = quoteCommercial({ scope: "social", reach: "local", assets: 1 });
+    const big = quoteCommercial({ scope: "packaging", reach: "global", assets: 3 });
+    assert.ok(big.total > base.total);
+    const excl = quoteCommercial({ scope: "social", reach: "local", assets: 1, exclusive: true });
+    assert.ok(excl.total > base.total);
+    // per-asset should be reported and consistent
+    assert.equal(big.perAsset, Math.round(big.total / 3));
+    // guards against zero/negative assets
+    assert.ok(quoteCommercial({ assets: 0 }).total > 0);
+  },
+
+  "print price applies bulk discount at volume"() {
+    const one = printPrice({ product: "print", size: "m", qty: 1 });
+    const twelve = printPrice({ product: "print", size: "m", qty: 12 });
+    assert.equal(twelve.bulkApplied, true);
+    assert.ok(twelve.total < one.unit * 12);
+    assert.ok(printPrice({ product: "canvas", size: "l" }).total > printPrice({ product: "sticker", size: "s" }).total);
+  },
+
+  "cartTotal sums price * qty"() {
+    assert.equal(cartTotal([{ price: 10, qty: 2 }, { price: 8, qty: 1 }]), 28);
+    assert.equal(cartTotal([]), 0);
+    assert.ok(STYLE_PACKS.length >= 4);
+  },
+
+  "payment config helpers build stable keys and resolve links"() {
+    assert.equal(planLinkKey("pro", "monthly"), "plan_pro_monthly");
+    assert.equal(packLinkKey("anime"), "pack_anime");
+    // Unconfigured -> null (demo fallback path).
+    assert.equal(formspreeEndpoint({ formspreeId: "" }), null);
+    assert.equal(paymentLink("plan_pro_monthly", { stripeLinks: {} }), null);
+    // Configured -> real values.
+    assert.equal(formspreeEndpoint({ formspreeId: "abc123" }), "https://formspree.io/f/abc123");
+    const cfg = { stripeLinks: { plan_pro_monthly: "https://buy.stripe.com/x" } };
+    assert.equal(paymentLink("plan_pro_monthly", cfg), "https://buy.stripe.com/x");
+  },
+
+  async "submitContact skips network when unconfigured (demo path)"() {
+    let called = false;
+    const fakeFetch = () => { called = true; return Promise.resolve({ ok: true }); };
+    const res = await submitContact({ name: "A" }, { formspreeId: "" }, fakeFetch);
+    assert.equal(res.delivered, false);
+    assert.equal(called, false, "must not hit the network with no endpoint");
+  },
+
+  async "submitContact POSTs JSON to the Formspree endpoint when configured"() {
+    let seen;
+    const fakeFetch = (url, opts) => {
+      seen = { url, opts };
+      return Promise.resolve({ ok: true });
+    };
+    const res = await submitContact(
+      { name: "Ada", email: "a@b.co", message: "hello there" },
+      { formspreeId: "form99" },
+      fakeFetch
+    );
+    assert.equal(res.delivered, true);
+    assert.equal(seen.url, "https://formspree.io/f/form99");
+    assert.equal(seen.opts.method, "POST");
+    assert.match(seen.opts.headers["Content-Type"], /application\/json/);
+    assert.deepEqual(JSON.parse(seen.opts.body), { name: "Ada", email: "a@b.co", message: "hello there" });
+  },
+
+  async "submitContact throws on a failed HTTP response"() {
+    const fakeFetch = () => Promise.resolve({ ok: false, status: 500 });
+    await assert.rejects(
+      () => submitContact({ name: "A" }, { formspreeId: "form99" }, fakeFetch),
+      /formspree 500/
+    );
+  },
+
+  "buildLineItems recomputes amounts server-side in pence"() {
+    const print = buildLineItems({ kind: "print", product: "canvas", size: "l", qty: 3 });
+    assert.equal(print.length, 1);
+    assert.equal(print[0].quantity, 3);
+    assert.ok(Number.isInteger(print[0].amount) && print[0].amount > 0);
+
+    const cart = buildLineItems({ kind: "cart", items: [{ id: "anime", qty: 2 }, { id: "8bit", qty: 1 }] });
+    assert.equal(cart.length, 2);
+    assert.equal(cart[0].amount, 12 * 100); // Anime Deluxe £12 -> pence
+
+    const quote = buildLineItems({ kind: "quote", scope: "packaging", reach: "global", assets: 2 });
+    assert.equal(quote.length, 1);
+    assert.equal(quote[0].quantity, 1);
+  },
+
+  "buildLineItems rejects bad input"() {
+    assert.throws(() => buildLineItems({ kind: "print", product: "nope" }), /unknown product/);
+    assert.throws(() => buildLineItems({ kind: "cart", items: [] }), /empty cart/);
+    assert.throws(() => buildLineItems({ kind: "cart", items: [{ id: "ghost" }] }), /unknown pack/);
+    assert.throws(() => buildLineItems({ kind: "mystery" }), /unknown checkout kind/);
+  },
+
+  "stripeForm encodes nested params the way Stripe expects"() {
+    const encoded = stripeForm(buildSessionParams(
+      [{ name: "Art print (m)", amount: 1800, quantity: 2 }],
+      { successUrl: "https://x/s", cancelUrl: "https://x/c" }
+    ));
+    assert.match(encoded, /mode=payment/);
+    assert.match(encoded, /line_items%5B0%5D%5Bprice_data%5D%5Bunit_amount%5D=1800/);
+    assert.match(encoded, /line_items%5B0%5D%5Bquantity%5D=2/);
+    assert.match(encoded, /product_data%5D%5Bname%5D=Art%20print/);
+  },
+
+  async "createCheckoutSession posts to Stripe and returns the url"() {
+    let seen;
+    const fakeFetch = (url, opts) => {
+      seen = { url, opts };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: "cs_1", url: "https://checkout.stripe.com/cs_1" }) });
+    };
+    const out = await createCheckoutSession(
+      { kind: "print", product: "print", size: "m", qty: 1 },
+      { apiKey: "sk_test", successUrl: "https://x/s", cancelUrl: "https://x/c", fetchImpl: fakeFetch }
+    );
+    assert.equal(out.url, "https://checkout.stripe.com/cs_1");
+    assert.match(seen.url, /\/v1\/checkout\/sessions$/);
+    assert.equal(seen.opts.headers.Authorization, "Bearer sk_test");
+    assert.match(seen.opts.headers["Content-Type"], /x-www-form-urlencoded/);
+  },
+
+  async "createCheckoutSession requires a secret key and surfaces stripe errors"() {
+    await assert.rejects(
+      () => createCheckoutSession({ kind: "print", product: "print" }, { apiKey: "" }),
+      /missing Stripe secret key/
+    );
+    const failFetch = () => Promise.resolve({ ok: false, status: 402, text: () => Promise.resolve("card_declined") });
+    await assert.rejects(
+      () => createCheckoutSession(
+        { kind: "print", product: "print", size: "m", qty: 1 },
+        { apiKey: "sk_test", successUrl: "s", cancelUrl: "c", fetchImpl: failFetch }
+      ),
+      /stripe 402/
+    );
+  },
+
+  "parseSignatureHeader extracts timestamp and v1 signatures"() {
+    const p = parseSignatureHeader("t=1700000000,v1=abc,v1=def");
+    assert.equal(p.t, 1700000000);
+    assert.deepEqual(p.v1, ["abc", "def"]);
+    assert.deepEqual(parseSignatureHeader(null), { t: null, v1: [] });
+  },
+
+  "verifyStripeSignature accepts a correctly signed payload"() {
+    const secret = "whsec_test";
+    const t = 1700000000;
+    const body = JSON.stringify({ id: "evt_1", type: "checkout.session.completed" });
+    const header = `t=${t},v1=${computeSignature(body, t, secret)}`;
+    const event = verifyStripeSignature(body, header, secret, { now: t });
+    assert.equal(event.id, "evt_1");
+  },
+
+  "verifyStripeSignature rejects forged, stale and malformed events"() {
+    const secret = "whsec_test";
+    const t = 1700000000;
+    const body = JSON.stringify({ id: "evt_1" });
+    const good = computeSignature(body, t, secret);
+
+    // wrong signature
+    assert.throws(() => verifyStripeSignature(body, `t=${t},v1=deadbeef`, secret, { now: t }), /mismatch/);
+    // signed with a different secret
+    assert.throws(() => verifyStripeSignature(body, `t=${t},v1=${good}`, "whsec_other", { now: t }), /mismatch/);
+    // stale timestamp beyond tolerance
+    assert.throws(() => verifyStripeSignature(body, `t=${t},v1=${good}`, secret, { now: t + 10000 }), /tolerance/);
+    // tampered body no longer matches the signature
+    assert.throws(() => verifyStripeSignature(body + " ", `t=${t},v1=${good}`, secret, { now: t }), /mismatch/);
+    // missing header / secret
+    assert.throws(() => verifyStripeSignature(body, "", secret, { now: t }), /bad signature header/);
+    assert.throws(() => verifyStripeSignature(body, `t=${t},v1=${good}`, "", { now: t }), /missing webhook secret/);
+  },
+
+  async "handleEvent fulfils only paid checkout sessions"() {
+    let fulfilledId = null;
+    const fulfil = (s) => { fulfilledId = s.id; };
+
+    const paid = await handleEvent(
+      { type: "checkout.session.completed", data: { object: { id: "cs_1", payment_status: "paid" } } },
+      { fulfil }
+    );
+    assert.equal(paid.fulfilled, true);
+    assert.equal(fulfilledId, "cs_1");
+
+    fulfilledId = null;
+    const unpaid = await handleEvent(
+      { type: "checkout.session.completed", data: { object: { id: "cs_2", payment_status: "unpaid" } } },
+      { fulfil }
+    );
+    assert.equal(unpaid.fulfilled, false);
+    assert.equal(fulfilledId, null, "unpaid sessions must not fulfil");
+
+    const other = await handleEvent({ type: "payment_intent.created", data: { object: {} } }, { fulfil });
+    assert.equal(other.handled, false);
+  },
+};

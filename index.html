@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Cartoon Studio turns any idea into a polished cartoon in seconds — six tuned styles, clear commercial licensing, prints, and an API." />
+  <title>Cartoon Studio — AI Cartoons in Seconds</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top">Cartoon<span>Studio</span></a>
+
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu"
+        aria-controls="primary-nav" aria-expanded="false">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
+
+      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#studio">Studio</a></li>
+          <li><a href="#gallery">Gallery</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#tools">Tools</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy" data-reveal>
+          <span class="eyebrow">✦ AI cartoon studio</span>
+          <h1>Any idea, a <span class="grad">polished cartoon</span> in seconds.</h1>
+          <p class="lead">
+            Describe a character, pick a signature style, and get downloadable,
+            commercially-licensable artwork — no design skills, no waiting on a queue.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="#studio">Try the live studio</a>
+            <a class="btn btn-ghost" href="#pricing">See pricing</a>
+          </div>
+          <div class="stats" id="stats" aria-label="Key numbers"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Studio -->
+    <section id="studio" class="studio">
+      <div class="container">
+        <header class="section-head" data-reveal>
+          <h2>Live studio</h2>
+          <p>Real renders, right here. Pick a style, describe your subject, generate.</p>
+        </header>
+
+        <div class="studio-grid">
+          <div class="studio-controls" data-reveal>
+            <h3 class="control-label">1 · Choose a style</h3>
+            <div class="style-cards" id="studio-styles"></div>
+
+            <h3 class="control-label">2 · Describe your subject</h3>
+            <textarea id="studio-subject" rows="2"
+              placeholder="e.g. a skateboarding fox in a hoodie"></textarea>
+            <div class="chips" id="studio-chips" aria-label="Example subjects"></div>
+
+            <details class="prompt-details">
+              <summary>Optimized master prompt</summary>
+              <code id="studio-prompt" class="prompt-view"></code>
+            </details>
+
+            <div class="studio-actions">
+              <button class="btn btn-primary" id="studio-generate" type="button">Generate</button>
+              <button class="btn btn-ghost" id="studio-variation" type="button">New variation</button>
+            </div>
+          </div>
+
+          <div class="studio-preview" data-reveal>
+            <div class="studio-canvas" id="studio-canvas" aria-live="polite"></div>
+            <div class="studio-meta">
+              <span class="engine-tag" id="studio-engine"></span>
+              <button class="btn btn-ghost btn-sm" id="studio-download" type="button" disabled>Download SVG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="features">
+      <div class="container">
+        <header class="section-head" data-reveal>
+          <h2>Built to outclass a stock illustration pack</h2>
+          <p>Everything a brand needs to ship on-model art at scale.</p>
+        </header>
+        <div class="card-grid" id="features-grid"></div>
+      </div>
+    </section>
+
+    <!-- Gallery -->
+    <section id="gallery" class="gallery">
+      <div class="container">
+        <header class="section-head" data-reveal>
+          <h2>Made with Cartoon Studio</h2>
+          <p>Every piece below is generated live by the studio engine.</p>
+        </header>
+        <div class="gallery-grid" id="gallery-grid"></div>
+      </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="pricing">
+      <div class="container">
+        <header class="section-head" data-reveal>
+          <h2>Simple, scalable pricing</h2>
+          <p>Start free. Upgrade when the whole team wants in.</p>
+        </header>
+        <div class="billing-switch" data-reveal>
+          <span id="billing-label">Monthly</span>
+          <label class="switch">
+            <input type="checkbox" id="billing-toggle" aria-label="Toggle annual billing" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="plans" id="plans"></div>
+        <p class="tool-status" id="plan-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- Revenue tools -->
+    <section id="tools" class="tools">
+      <div class="container">
+        <header class="section-head" data-reveal>
+          <h2>Studio tools</h2>
+          <p>Turn a single cartoon into licenses, packs and physical products.</p>
+        </header>
+
+        <div class="tools-grid">
+          <!-- Tool: commercial license quote -->
+          <article class="tool card" data-reveal>
+            <h3>Commercial license quote</h3>
+            <p class="tool-sub">Know your usage rights and price instantly.</p>
+            <form id="quote-form" class="tool-form">
+              <label>Usage
+                <select name="scope">
+                  <option value="social">Social media</option>
+                  <option value="web">Website / app</option>
+                  <option value="print">Print</option>
+                  <option value="broadcast">Broadcast / video</option>
+                  <option value="packaging">Product packaging</option>
+                </select>
+              </label>
+              <label>Reach
+                <select name="reach">
+                  <option value="local">Local</option>
+                  <option value="national">National</option>
+                  <option value="global">Global</option>
+                </select>
+              </label>
+              <label>Assets
+                <input type="number" name="assets" min="1" value="1" />
+              </label>
+              <label class="check"><input type="checkbox" name="exclusive" /> Exclusive rights</label>
+              <label class="check"><input type="checkbox" name="rush" /> Rush (48h)</label>
+              <div class="tool-result" id="quote-result"></div>
+              <button class="btn btn-primary btn-sm" type="submit">Lock this quote</button>
+              <p class="tool-status" id="quote-status" role="status" aria-live="polite"></p>
+            </form>
+          </article>
+
+          <!-- Tool: print shop -->
+          <article class="tool card" data-reveal>
+            <h3>Print shop</h3>
+            <p class="tool-sub">Ship your cartoon as real, physical products.</p>
+            <form id="print-form" class="tool-form">
+              <label>Product
+                <select name="product">
+                  <option value="sticker">Sticker pack</option>
+                  <option value="print" selected>Art print</option>
+                  <option value="canvas">Framed canvas</option>
+                  <option value="mug">Mug</option>
+                  <option value="tee">T-shirt</option>
+                </select>
+              </label>
+              <label>Size
+                <select name="size">
+                  <option value="s">Small</option>
+                  <option value="m" selected>Medium</option>
+                  <option value="l">Large</option>
+                </select>
+              </label>
+              <label>Quantity
+                <input type="number" name="qty" min="1" value="1" />
+              </label>
+              <div class="tool-result" id="print-result"></div>
+              <button class="btn btn-primary btn-sm" type="submit">Add to order</button>
+              <p class="tool-status" id="print-status" role="status" aria-live="polite"></p>
+            </form>
+          </article>
+
+          <!-- Tool: style-pack store -->
+          <article class="tool card tool-wide" data-reveal>
+            <div class="store-head">
+              <div>
+                <h3>Style-pack store</h3>
+                <p class="tool-sub">Add à-la-carte styles to your account.</p>
+              </div>
+              <div class="cart">
+                🛒 <span id="cart-count">0</span> · <strong id="cart-total">£0</strong>
+                <button class="btn btn-primary btn-sm" id="cart-checkout" type="button">Checkout</button>
+              </div>
+            </div>
+            <div class="store-grid" id="store-grid"></div>
+            <p class="tool-status" id="store-status" role="status" aria-live="polite"></p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="social-proof">
+      <div class="container">
+        <header class="section-head" data-reveal>
+          <h2>Loved by brands and creators</h2>
+        </header>
+        <div class="testimonials" id="testimonials"></div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="contact">
+      <div class="container">
+        <header class="section-head" data-reveal>
+          <h2>Start a commission</h2>
+          <p>Prefer a bespoke project? Tell us what you need.</p>
+        </header>
+        <form class="contact-form" id="contact-form" novalidate data-reveal>
+          <label>Name
+            <input type="text" name="name" required aria-describedby="name-error" />
+            <span class="field-error" id="name-error" role="alert"></span>
+          </label>
+          <label>Email
+            <input type="email" name="email" required aria-describedby="email-error" />
+            <span class="field-error" id="email-error" role="alert"></span>
+          </label>
+          <label>Tell us about your project
+            <textarea name="message" rows="4" required aria-describedby="message-error"></textarea>
+            <span class="field-error" id="message-error" role="alert"></span>
+          </label>
+          <button class="btn btn-primary" type="submit">Send enquiry</button>
+          <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year"></span> Cartoon Studio. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
