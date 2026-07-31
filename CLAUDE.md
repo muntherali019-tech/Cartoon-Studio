@@ -45,7 +45,7 @@ public/                 Static web app (no bundler)
   index.html            Landing + Studio (tabs), pricing, packs, referral, auth modal
   app.js                Front-end + the Toon Render canvas engine
   styles.css            Premium UI, animations (reduced-motion aware)
-test/                   node:test suites (server HTTP + demo + auth units)
+test/                   node:test suites (in-process server HTTP + demo/auth/ai/billing units)
 .github/workflows/ci.yml  install → audit → syntax-check → tests → smoke test
 render.yaml             One-service Render blueprint
 ```
@@ -112,11 +112,29 @@ Character Kit), and a **give-15-get-15 referral loop**.
 
 ## Testing
 
-`npm test` boots the real server against an isolated temp store and drives every
-route over HTTP (auth, credits, gating, billing gating, referrals), plus unit
-tests for the token signer, credit accounting, and the demo engine. Everything
-runs in demo mode, so **no keys or network are required**, and it runs in CI on
-every push/PR. Add tests alongside any new route or logic.
+`npm test` runs the real app **in-process** against an isolated temp store
+(`DATA_DIR`) and drives every route over HTTP on an ephemeral port, plus unit
+tests for the token signer, credit accounting, the demo engine, the loose-JSON
+parser, and the Stripe webhook. Everything runs in demo mode, so **no keys or
+network are required**, and it runs in CI on every push/PR. Add tests alongside
+any new route or logic.
+
+`npm run test:coverage` adds Node's built-in coverage report. **Keep the server
+in-process** — `--experimental-test-coverage` instruments only the current
+process, so spawning the server as a child hides `index.js`, `billing.js` and
+`ai.js` from the report entirely (they read 0% however well they are tested).
+`server/index.js` exports `{ app, initStore }` and only calls `app.listen` when
+run directly, which is what makes this possible.
+
+Two things are worth knowing when touching billing:
+
+- `verifySignature` takes injectable `now` / `secret` / `toleranceSeconds`, so
+  signature and replay behaviour can be tested without env juggling or waiting
+  on the clock. Signatures older than `STRIPE_WEBHOOK_TOLERANCE` (default 300s)
+  are rejected.
+- Webhook side effects are **idempotent per user**: applied event ids are
+  recorded on `user.processedEvents` (capped at 50) and re-delivered events are
+  skipped, so a retried or replayed credit-pack purchase cannot stack credits.
 
 ## Deploy
 
