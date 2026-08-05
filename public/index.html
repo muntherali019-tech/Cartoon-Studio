@@ -6,6 +6,30 @@
     <meta name="theme-color" content="#141821" />
     <title>Cartoon Studio — turn any idea into cartoons, comics & stickers</title>
     <meta name="description" content="Cartoon Studio is the AI studio that turns a prompt or a photo into cartoons, comic strips, characters and sticker packs — then exports them. Free to start." />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Social cards. og:image is a real 1200x630 raster: most scrapers will not
+         render an SVG icon, and a card with no image is just a grey link.
+         NOTE: og:url and <link rel="canonical"> are deliberately absent until a
+         production domain is settled — they must be absolute, and pointing them
+         at the wrong host is worse than omitting them. Make og:image absolute at
+         the same time; relative image URLs are resolved inconsistently. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Cartoon Studio" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:title" content="Cartoon Studio — turn any idea into cartoons, comics & stickers" />
+    <meta property="og:description" content="Type an idea or drop a photo. Cartoon Studio draws the character, writes the comic, and mints a matching sticker pack — ready to post, print or sell." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Cartoon Studio — turn any idea into a cartoon" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Cartoon Studio — turn any idea into cartoons, comics & stickers" />
+    <meta name="twitter:description" content="Type an idea or drop a photo. Cartoon Studio draws the character, writes the comic, and mints a matching sticker pack." />
+    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image:alt" content="Cartoon Studio — turn any idea into a cartoon" />
+
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23FF5C7A'/%3E%3Ctext x='50' y='72' font-size='60' text-anchor='middle'%3E%F0%9F%8E%A8%3C/text%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
@@ -149,6 +173,7 @@
           <div class="panel-grid">
             <div class="controls card">
               <p class="muted">Drop a photo — Cartoon Studio reads it and redraws it as a cartoon that still looks like you.</p>
+              <label class="sr-only" for="toonFile">Photo to toonify</label>
               <input type="file" id="toonFile" accept="image/*" />
               <label class="field"><span>Style (optional)</span>
                 <select id="toonStyle">
@@ -269,6 +294,7 @@
             <p class="muted">Share your link. When a friend joins, you both get 15 bonus credits — instantly.</p>
           </div>
           <div class="referral-share">
+            <label class="sr-only" for="referralLink">Your referral link</label>
             <input id="referralLink" readonly />
             <button class="btn btn-primary" id="referralCopy">Copy link</button>
           </div>
