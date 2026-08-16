@@ -11,8 +11,9 @@ import {
 } from "./auth.js";
 import {
   stripeEnabled, creditPacksEnabled,
-  createCheckout, createPackCheckout, handleWebhook, CREDIT_PACKS,
+  createCheckout, createPackCheckout, handleWebhook,
 } from "./billing.js";
+import { catalog } from "./products.js";
 import { generateImage, imageProvider } from "./images.js";
 import { initStore, backend } from "./store.js";
 import { PROMPTS } from "./prompts.js";
@@ -51,10 +52,9 @@ app.get("/api/config", (req, res) => {
   res.json({
     ...aiStatus(),
     watermark: !NO_WATERMARK,
-    plans: PLANS,
+    ...catalog(),
     stripe: stripeEnabled,
     creditPacksEnabled,
-    creditPacks: CREDIT_PACKS.map(({ id, label, credits, price, best }) => ({ id, label, credits, price, best })),
     imageProvider,
     user: publicUser(req.user),
   });
@@ -323,24 +323,6 @@ app.use((err, _req, res, _next) => {
   if (res.headersSent) return;
   res.status(500).json({ error: "server_error" });
 });
-
-const PLANS = [
-  {
-    id: "free", name: "Free", price: "$0", period: "forever", credits: "8 cartoons / mo",
-    features: ["Toon Render engine", "Watermark", "Single cartoons", "Meme captions", "Photo → cartoon"],
-    cta: "Start free",
-  },
-  {
-    id: "creator", name: "Creator", price: "$12", period: "/mo", credits: "150 cartoons / mo",
-    features: ["No watermark", "Comic Strip Studio", "Character Kit", "Sticker packs", "HD export"],
-    cta: "Go Creator", popular: true,
-  },
-  {
-    id: "studio", name: "Studio", price: "$39", period: "/mo", credits: "Unlimited cartoons",
-    features: ["Everything in Creator", "Priority rendering", "Commercial licence", "Merch-ready export", "API access"],
-    cta: "Go Studio",
-  },
-];
 
 const PORT = process.env.PORT || 3000;
 

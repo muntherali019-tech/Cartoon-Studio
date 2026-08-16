@@ -2,6 +2,7 @@
 // Character Kit (a premium feature), and a give-10-get-10 referral loop.
 import crypto from "node:crypto";
 import { getUser, getUserById, saveUser, getUserByReferral } from "./store.js";
+import { PLAN_CREDITS } from "./products.js";
 
 const SECRET =
   process.env.AUTH_SECRET ||
@@ -16,8 +17,9 @@ if (!SECRET)
 
 const SECRET_KEY = SECRET || crypto.randomBytes(32).toString("hex");
 
-// Plans → monthly credit allowance (Infinity = unlimited).
-export const PLAN_CREDITS = { free: 8, creator: 150, studio: Infinity };
+// Plans → monthly credit allowance (Infinity = unlimited). Defined alongside
+// the plan catalog in products.js and re-exported here so the two can't drift.
+export { PLAN_CREDITS };
 
 // Referral reward — credits granted to BOTH parties when a referral converts.
 export const REFERRAL_BONUS = Number(process.env.REFERRAL_BONUS) || 15;

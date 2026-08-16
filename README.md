@@ -59,6 +59,20 @@ Four monetization surfaces, all wired end-to-end:
 3. **Premium tools** — Comic Studio, Sticker Studio and Character Kit are gated to paid plans.
 4. **Referral loop** — give-15-get-15 credits turns every user into a growth channel.
 
+**Switching billing on takes two environment variables:** `STRIPE_SECRET_KEY`
+and `STRIPE_WEBHOOK_SECRET`. Nothing has to be created in the Stripe dashboard
+first — every plan and pack in `server/products.js` carries its own `amount`,
+and Checkout sessions are built from inline `price_data`. Point your Stripe
+webhook at `https://<your-app>/api/billing/webhook` for
+`checkout.session.completed`, `customer.subscription.created` and
+`customer.subscription.deleted`.
+
+To change a price, edit `amount` (and the matching `price` display string) in
+`server/products.js`. To manage prices in the Stripe dashboard instead — for tax
+behaviour, currency variants or coupons — create a Price there and set the
+matching `STRIPE_PRICE_*` variable; it overrides the inline amount for that SKU
+only.
+
 ## Run locally
 
 ```bash
@@ -82,7 +96,8 @@ on every push and PR.
 
 This repo ships `render.yaml`. Connect the repo as a Blueprint, then add your
 keys in the dashboard: `ANTHROPIC_API_KEY` (live AI), `OPENAI_API_KEY` +
-`IMAGE_PROVIDER=openai` (photoreal), `STRIPE_*` (billing), `DATABASE_URL`
+`IMAGE_PROVIDER=openai` (photoreal), `STRIPE_SECRET_KEY` +
+`STRIPE_WEBHOOK_SECRET` (billing), `DATABASE_URL`
 (durable Postgres). Everything degrades gracefully when unset.
 
 See **CLAUDE.md** for architecture and contributor conventions.

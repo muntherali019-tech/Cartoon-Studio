@@ -81,6 +81,22 @@ image model is wired). The Anthropic API key never reaches the browser.
 - **Credits & gating.** Paid actions call `spendCredit(user, cost)` (monthly
   allowance first, then purchased/bonus credits) and premium tools check
   `isPremium(user)`. Costs are centralized in `COST` in `server/index.js`.
+- **`server/products.js` is the single source of truth for everything for sale.**
+  Plans (with `PLAN_CREDITS`) and one-time credit packs live there and nowhere
+  else: `auth.js` re-exports `PLAN_CREDITS`, `billing.js` builds Checkout from
+  it, and `/api/config` serves `catalog()` straight to the storefront. Never
+  re-declare a plan list in `index.js` — a tier that exists in the storefront
+  but not in `PLAN_CREDITS` gets silently no-opped by `setPlan` *after* the
+  customer has paid. `catalog()` strips the server-only `stripePrice` field
+  before it reaches the browser.
+- **Going live requires only `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`.**
+  `buildLineItem` sends inline `price_data` derived from each SKU's `amount`, so
+  no Products or Prices need creating in the Stripe dashboard first. A
+  `STRIPE_PRICE_*` env var, when set, overrides the inline amount for that SKU
+  (`price` and `price_data` are mutually exclusive in the Stripe API — never
+  send both). Keep display strings (`price`) in step with `amount`;
+  `products.test.js` asserts they agree, because a drift there mis-prices a
+  real sale.
 - **Secrets stay server-side.** No API keys in `public/`. The client only ever
   sees `publicUser(...)` (never password hashes or Stripe internals).
 - **Persistence is backend-agnostic.** Use the `store.js` async API; it works

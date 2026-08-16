@@ -4,24 +4,40 @@
 import crypto from "node:crypto";
 import { getUserById, getUserByStripeCustomer } from "./store.js";
 import { setPlan, grantCredits } from "./auth.js";
+import { CURRENCY, CREDIT_PACKS, findPack, findPlan } from "./products.js";
 
 const SECRET = process.env.STRIPE_SECRET_KEY || "";
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
-const PRICES = {
-  creator: process.env.STRIPE_PRICE_CREATOR || "",
-  studio: process.env.STRIPE_PRICE_STUDIO || "",
-};
 
-// One-time credit packs — an à-la-carte revenue stream on top of subscriptions.
-// Each maps to a Stripe one-time Price. `credits` is granted on payment.
-export const CREDIT_PACKS = [
-  { id: "pack60", label: "60 credits", credits: 60, price: "$9", stripePrice: process.env.STRIPE_PRICE_PACK60 || "" },
-  { id: "pack250", label: "250 credits", credits: 250, price: "$29", best: true, stripePrice: process.env.STRIPE_PRICE_PACK250 || "" },
-  { id: "pack600", label: "600 credits", credits: 600, price: "$59", stripePrice: process.env.STRIPE_PRICE_PACK600 || "" },
-];
+export { CREDIT_PACKS };
 
-export const stripeEnabled = Boolean(SECRET && (PRICES.creator || PRICES.studio));
-export const creditPacksEnabled = Boolean(SECRET && CREDIT_PACKS.some((p) => p.stripePrice));
+// A secret key is the only thing checkout needs: every SKU in products.js
+// carries its own `amount`, so sessions are built from inline `price_data`
+// rather than Price IDs that have to be hand-created in the Stripe dashboard
+// first. Setting STRIPE_PRICE_* on a SKU still overrides the inline amount.
+export const stripeEnabled = Boolean(SECRET);
+export const creditPacksEnabled = Boolean(SECRET);
+
+// Build the `line_items[0]` params for a SKU. Prefers a configured dashboard
+// Price; otherwise describes the charge inline. `interval` (e.g. "month") makes
+// it recurring — required for `mode: "subscription"`, invalid for `"payment"`.
+// Pure and exported so the shape can be asserted without touching Stripe.
+export function buildLineItem(sku, { interval } = {}) {
+  if (!sku) throw new Error("Unknown product");
+  const item = { "line_items[0][quantity]": "1" };
+  if (sku.stripePrice) return { ...item, "line_items[0][price]": sku.stripePrice };
+  if (!(sku.amount > 0)) throw new Error("Unknown product");
+  const p = "line_items[0][price_data]";
+  const inline = {
+    ...item,
+    [`${p}[currency]`]: CURRENCY,
+    [`${p}[unit_amount]`]: String(sku.amount),
+    [`${p}[product_data][name]`]: `Cartoon Studio ${sku.name || sku.label}`,
+  };
+  if (sku.blurb) inline[`${p}[product_data][description]`] = sku.blurb;
+  if (interval) inline[`${p}[recurring][interval]`] = interval;
+  return inline;
+}
 
 async function stripe(endpoint, params) {
   const res = await fetch(`https://api.stripe.com/v1/${endpoint}`, {
@@ -40,12 +56,11 @@ async function stripe(endpoint, params) {
 // Create a subscription Checkout session for a plan.
 export async function createCheckout({ user, plan, origin }) {
   if (!stripeEnabled) throw new Error("Stripe is not configured");
-  const price = PRICES[plan];
-  if (!price) throw new Error("Unknown plan");
+  const def = findPlan(plan);
+  if (!def || !(def.amount > 0)) throw new Error("Unknown plan");
   const session = await stripe("checkout/sessions", {
     mode: "subscription",
-    "line_items[0][price]": price,
-    "line_items[0][quantity]": "1",
+    ...buildLineItem(def, { interval: def.interval || "month" }),
     client_reference_id: user.id,
     customer_email: user.email,
     "metadata[plan]": plan,
@@ -59,12 +74,11 @@ export async function createCheckout({ user, plan, origin }) {
 // Create a one-time Checkout session for a credit pack.
 export async function createPackCheckout({ user, pack, origin }) {
   if (!creditPacksEnabled) throw new Error("Credit packs are not configured");
-  const def = CREDIT_PACKS.find((p) => p.id === pack);
-  if (!def || !def.stripePrice) throw new Error("Unknown pack");
+  const def = findPack(pack);
+  if (!def) throw new Error("Unknown pack");
   const session = await stripe("checkout/sessions", {
     mode: "payment",
-    "line_items[0][price]": def.stripePrice,
-    "line_items[0][quantity]": "1",
+    ...buildLineItem(def),
     client_reference_id: user.id,
     customer_email: user.email,
     "metadata[type]": "pack",

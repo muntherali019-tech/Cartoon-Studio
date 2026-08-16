@@ -17,7 +17,8 @@ services:
       # Add your keys in the Render dashboard (kept out of source):
       #   ANTHROPIC_API_KEY   — live AI (else demo mode)
       #   OPENAI_API_KEY + IMAGE_PROVIDER=openai — photoreal cartoon rendering
-      #   STRIPE_SECRET_KEY, STRIPE_PRICE_*, STRIPE_WEBHOOK_SECRET — billing
+      #   STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET — billing (that's all it needs;
+      #     prices come from server/products.js, so no dashboard Prices to create)
       #   DATABASE_URL        — durable Postgres (else JSON file)
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -26,4 +27,7 @@ services:
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Durable storage — without it, accounts and credits reset on every deploy.
+      - key: DATABASE_URL
         sync: false
